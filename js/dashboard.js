@@ -1,5 +1,6 @@
 // ============================================
 // Dashboard - Real-time Gauge Updates & Emergency System
+// Integrated with Web3Forms Direct Email Dispatch
 // ============================================
 
 // Total SVG arc length for the semicircle gauges (r=80, 180 degrees)
@@ -25,19 +26,13 @@ let isAudioMuted = false;
 let audioContext = null;
 let sirenInterval = null;
 let lastEmailSentTimestamp = 0;
-const EMAIL_COOLDOWN_MS = 5 * 60 * 1000; // 5-minute cooldown between emergency emails
+const EMAIL_COOLDOWN_MS = 60 * 1000; // 1-minute cooldown between emergency emails for testing
 let isSimulationActive = false;
 
-// Initialize EmailJS (Optional: user can insert their free public key in firebase-config.js or here)
-const EMAILJS_CONFIG = {
-    serviceId: "service_airquality",
-    templateId: "template_emergency",
-    publicKey: "YOUR_EMAILJS_PUBLIC_KEY" // Optional: ready for EmailJS integration
-};
-
-if (window.emailjs && EMAILJS_CONFIG.publicKey !== "YOUR_EMAILJS_PUBLIC_KEY") {
-    emailjs.init({ publicKey: EMAILJS_CONFIG.publicKey });
-}
+// ============================================
+// WEB3FORMS MASTER ACCESS KEY
+// ============================================
+const WEB3FORMS_ACCESS_KEY = "6082d8ac-4c0f-4434-969f-e0e7c1974d91";
 
 /**
  * Update a speedometer gauge with a new value
@@ -156,7 +151,7 @@ function updateStatus(id, percent) {
  * ============================================
  */
 function evaluateEmergencyConditions(temp, humid, gas) {
-    if (isSimulationActive) return; // Keep simulation overrides if user is testing
+    if (isSimulationActive) return;
 
     const gasAbnormal = gas >= EMERGENCY_THRESHOLDS.gas;
     const tempAbnormal = temp >= EMERGENCY_THRESHOLDS.tempHigh;
@@ -206,7 +201,6 @@ function applyEmergencyState(state) {
             humidCard.classList.remove('emergency-blink');
         }
 
-        // Build emergency message
         const reasons = [];
         if (state.gasAbnormal) reasons.push(`Hazardous Gas (${Math.round(state.gasVal)} PPM)`);
         if (state.tempAbnormal) reasons.push(`Extreme Temp (${state.tempVal.toFixed(1)}°C)`);
@@ -215,10 +209,10 @@ function applyEmergencyState(state) {
         banner.className = 'status-banner danger';
         bannerMsg.innerHTML = `<strong>⚠️ EMERGENCY ALERT:</strong> ${reasons.join(' & ')} detected! Notification dispatched.`;
 
-        // Start audible alert (if not muted)
+        // Start audible siren
         startAudioAlert();
 
-        // Dispatch Email Notification to logged-in user
+        // Dispatch Real Email via Web3Forms
         triggerEmergencyEmailNotification(reasons.join(', '));
 
     } else {
@@ -246,7 +240,7 @@ function toggleEmergencySimulation() {
         simBtn.classList.add('active');
         simBtn.innerHTML = '<i class="fas fa-stop"></i> <span>Stop Simulation</span>';
 
-        // Simulate dangerous gas level (2450 PPM)
+        // Simulate dangerous levels
         updateGauge('gas', 2450, GAS_MIN, GAS_MAX);
         updateGauge('temp', 42.5, TEMP_MIN, TEMP_MAX);
         updateGauge('humid', 60.0, HUMID_MIN, HUMID_MAX);
@@ -283,7 +277,7 @@ function toggleEmergencySimulation() {
 }
 
 /**
- * Web Audio API Emergency Siren/Beep Tone
+ * Web Audio API Siren
  */
 function startAudioAlert() {
     if (isAudioMuted || sirenInterval) return;
@@ -298,8 +292,8 @@ function startAudioAlert() {
             const gain = audioContext.createGain();
 
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(880, audioContext.currentTime); // High pitch A5
-            osc.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.3); // Pitch drop
+            osc.frequency.setValueAtTime(880, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.3);
 
             gain.gain.setValueAtTime(0.15, audioContext.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
@@ -314,7 +308,7 @@ function startAudioAlert() {
         playBeep();
         sirenInterval = setInterval(playBeep, 1200);
     } catch (e) {
-        console.warn("Web Audio not allowed without user interaction yet:", e);
+        console.warn("Audio Context init waiting for user gesture:", e);
     }
 }
 
@@ -343,52 +337,75 @@ function toggleMuteAudio() {
 
 /**
  * ============================================
- * EMAIL NOTIFICATION TO LOGGED-IN GMAIL
+ * EMAIL DISPATCH VIA WEB3FORMS (Real Gmail delivery)
  * ============================================
  */
 function triggerEmergencyEmailNotification(incidentDetails) {
     const user = auth.currentUser;
-    const targetEmail = user ? user.email : "Logged-in User";
-    const userName = user ? (user.displayName || "User") : "Air Quality User";
+    const targetEmail = user ? user.email : "fafnir007vk@gmail.com";
 
     const now = Date.now();
-    // Check cooldown to avoid spamming user inbox every few seconds
+    // Cooldown check (60s during testing)
     if (now - lastEmailSentTimestamp < EMAIL_COOLDOWN_MS) {
         const remainingSec = Math.round((EMAIL_COOLDOWN_MS - (now - lastEmailSentTimestamp)) / 1000);
-        console.log(`[Email Cooldown Active] Next email alert allowed in ${remainingSec}s`);
+        console.log(`[Email Cooldown] Next email alert allowed in ${remainingSec}s`);
         return;
     }
 
     lastEmailSentTimestamp = now;
 
-    // Update dispatch status in info card
+    // Update dispatch status in card
     const statusEl = document.getElementById('emailDispatchStatus');
     if (statusEl) {
-        statusEl.textContent = `Dispatched to ${targetEmail}`;
+        statusEl.textContent = `Sending to ${targetEmail}...`;
     }
 
-    // Show floating toast alert on screen
+    // Show floating toast
     showEmailToast(targetEmail);
 
-    console.log(`🚨 [EMERGENCY EMAIL DISPATCH] Sending alert to: ${targetEmail}`);
-    console.log(`Reason: ${incidentDetails}`);
+    console.log(`🚨 [DISPATCHING REAL EMAIL via Web3Forms] Recipient: ${targetEmail}`);
 
-    // If EmailJS is integrated with credentials
-    if (window.emailjs && EMAILJS_CONFIG.publicKey !== "YOUR_EMAILJS_PUBLIC_KEY") {
-        emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, {
-            to_email: targetEmail,
-            to_name: userName,
-            alert_type: incidentDetails,
-            timestamp: new Date().toLocaleString()
-        }).then(
-            (response) => {
-                console.log("EmailJS Sent Successfully!", response.status, response.text);
-            },
-            (error) => {
-                console.error("EmailJS Error:", error);
+    const emailPayload = {
+        access_key: WEB3FORMS_ACCESS_KEY,
+        subject: "🚨 CRITICAL AIR QUALITY EMERGENCY DETECTED!",
+        from_name: "ESP32 Air Quality Monitor",
+        to_email: targetEmail,
+        reply_to: targetEmail,
+        message: `EMERGENCY AIR HAZARD ALERT!\n\n` +
+                 `Incident Details: ${incidentDetails}\n` +
+                 `Triggered at: ${new Date().toLocaleString()}\n\n` +
+                 `Immediate action required! Please ventilate the room and verify safety.\n` +
+                 `Live Dashboard: https://air-quality-monitor-delta.vercel.app`
+    };
+
+    fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify(emailPayload)
+    })
+    .then(async (response) => {
+        const result = await response.json();
+        if (response.status === 200) {
+            console.log("✅ [EMAIL DELIVERED SUCCESSFULLY]:", result);
+            if (statusEl) {
+                statusEl.textContent = `Dispatched to ${targetEmail} (Delivered)`;
             }
-        );
-    }
+        } else {
+            console.error("❌ [EMAIL DISPATCH ERROR]:", result);
+            if (statusEl) {
+                statusEl.textContent = `Delivery failed: ${result.message}`;
+            }
+        }
+    })
+    .catch((error) => {
+        console.error("❌ [NETWORK ERROR]:", error);
+        if (statusEl) {
+            statusEl.textContent = `Error connecting to email service`;
+        }
+    });
 }
 
 function showEmailToast(recipientEmail) {
