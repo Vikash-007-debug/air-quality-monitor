@@ -75,19 +75,7 @@ body {
     --pcb-trace-emergency-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cpath d='M 0 45 L 55 45 L 80 70 L 155 70 L 180 45 L 260 45' fill='none' stroke='rgba(255,23,68,0.15)' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M 45 0 L 45 35 L 25 55 L 25 180 L 45 200 L 45 260' fill='none' stroke='rgba(255,23,68,0.12)' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M 195 0 L 195 90 L 160 125 L 90 125 L 60 155 L 60 260' fill='none' stroke='rgba(255,23,68,0.15)' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M 0 195 L 80 195 L 105 170 L 175 170 L 205 200 L 260 200' fill='none' stroke='rgba(255,23,68,0.13)' stroke-width='1.2' stroke-linecap='round'/%3E%3Ccircle cx='80' cy='70' r='3.8' fill='%23170205' stroke='rgba(255,23,68,0.5)' stroke-width='1.4'/%3E%3Ccircle cx='80' cy='70' r='1.2' fill='%23ff1744'/%3E%3Ccircle cx='180' cy='45' r='3.8' fill='%23170205' stroke='rgba(255,23,68,0.5)' stroke-width='1.4'/%3E%3Ccircle cx='180' cy='45' r='1.2' fill='%23ff1744'/%3E%3Ccircle cx='160' cy='125' r='3.8' fill='%23170205' stroke='rgba(255,23,68,0.5)' stroke-width='1.4'/%3E%3Ccircle cx='160' cy='125' r='1.2' fill='%23ff1744'/%3E%3C/svg%3E");
 }
 
-/* Fullscreen Animated Circuit Canvas */
-.pcb-circuit-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.85;
-}
-
-/* Normal Matte Theme with Silver Circuit Wire Paths */
+/* Normal Matte Theme with Static Silver Circuit Wire Paths */
 body.theme-silver,
 body.home-page,
 body.login-page {
