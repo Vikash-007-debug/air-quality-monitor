@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEROMONITOR - ESP32 IoT Environmental Intelligence</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="home-page theme-silver">
+
+    <!-- Animated PCB Circuit Wire Canvas -->
+    <canvas id="pcbCircuitCanvas" class="pcb-circuit-canvas"></canvas>
+
+    <!-- Top Navigation Bar (Matte Obsidian & Silver PCB) -->
+    <header class="home-nav">
+        <div class="nav-brand">
+            <div class="brand-logo-hex">
+                <i class="fas fa-wind"></i>
+            </div>
+            <div class="brand-text">
+                <span class="brand-title">AERO<span class="brand-highlight">MONITOR</span></span>
+                <span class="brand-subtitle">ESP32 ENTERPRISE IOT</span>
+            </div>
+        </div>
+
+        <nav class="home-nav-links">
+            <a href="#sensors" class="home-nav-link"><i class="fas fa-microchip"></i> Sensors</a>
+            <a href="#architecture" class="home-nav-link"><i class="fas fa-diagram-project"></i> Architecture</a>
+            <a href="#simulator" class="home-nav-link"><i class="fas fa-sliders"></i> Live Demo</a>
+            <a href="#setup" class="home-nav-link"><i class="fas fa-wifi"></i> Setup Guide</a>
+        </nav>
+
+        <div class="home-nav-actions">
+            <!-- Dynamic Auth Button (Changes to 'Open Dashboard' when logged in) -->
+            <button class="btn-matte-silver" id="homeAuthBtn" onclick="signInWithGoogle()">
+                <i class="fab fa-google"></i> <span>Sign In</span>
+            </button>
+            <a href="dashboard.html" class="btn-matte-primary">
+                <span>Live Dashboard</span> <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main>
+
+        <!-- ============================================
+             HERO SECTION (MATTE FINISH & LIVE INSTRUMENTS)
+             ============================================ -->
+        <section class="home-hero">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <span class="badge-dot"></span>
+                    <span>ESP32 IOT ENVIRONMENTAL MONITORING SYSTEM</span>
+                </div>
+                <h1 class="hero-title">
+                    Next-Gen Real-Time <br>
+                    <span class="text-silver-gradient">Air Quality Telemetry</span>
+                </h1>
+                <p class="hero-description">
+                    Industrial-grade environmental intelligence powered by a dual-core 240MHz ESP32, MQ-135 gas analysis, DHT11 precision climate sensing, and automated 24/7 cloud emergency email dispatch.
+                </p>
+
+                <div class="hero-cta-group">
+                    <a href="dashboard.html" class="btn-matte-primary">
+                        <i class="fas fa-gauge-high"></i> <span>Launch Live Dashboard</span>
+                    </a>
+                    <a href="#simulator" class="btn-matte-silver">
+                        <i class="fas fa-bolt"></i> <span>Try Interactive Sandbox</span>
+                    </a>
+                    <button class="btn-matte-silver" onclick="signInWithGoogle()" style="border-color: rgba(255,255,255,0.25);">
+                        <i class="fab fa-google"></i> <span>Sign in with Google</span>
+                    </button>
+                </div>
+
+                <div class="hero-metrics-strip">
+                    <div class="hero-metric-item">
+                        <span class="hero-metric-val font-mono">3.0s</span>
+                        <span class="hero-metric-label">Sampling Loop</span>
+                    </div>
+                    <div class="hero-metric-item">
+                        <span class="hero-metric-val font-mono">12-Bit</span>
+                        <span class="hero-metric-label">ADC Resolution</span>
+                    </div>
+                    <div class="hero-metric-item">
+                        <span class="hero-metric-val font-mono">24/7</span>
+                        <span class="hero-metric-label">Cloud Dispatch</span>
+                    </div>
+                    <div class="hero-metric-item">
+                        <span class="hero-metric-val font-mono">0-Code</span>
+                        <span class="hero-metric-label">Hotspot Pairing</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Matte Telemetry Showcase Instrument -->
+            <div class="hero-instrument-box">
+                <div class="instrument-top">
+                    <div class="instrument-title">
+                        <i class="fas fa-wave-square" style="color: var(--accent-cyan);"></i>
+                        <span>Live Telemetry Broadcast Preview</span>
+                    </div>
+                    <span class="instrument-live-pill">
+                        <span class="badge-dot" style="background: var(--accent-emerald);"></span>
+                        <span>Active Stream</span>
+                    </span>
+                </div>
+
+                <div class="instrument-grid">
+                    <div class="instrument-card-mini">
+                        <span class="label"><i class="fas fa-smog"></i> Air Quality (Gas)</span>
+                        <span class="val font-mono" id="heroGasVal">418 <small>PPM</small></span>
+                        <span class="status-tag">OPTIMAL BASELINE</span>
+                    </div>
+                    <div class="instrument-card-mini">
+                        <span class="label"><i class="fas fa-temperature-half"></i> Temperature</span>
+                        <span class="val font-mono" id="heroTempVal">25.4 <small>°C</small></span>
+                        <span class="status-tag">COMFORTABLE</span>
+                    </div>
+                    <div class="instrument-card-mini">
+                        <span class="label"><i class="fas fa-droplet"></i> Air Moisture</span>
+                        <span class="val font-mono" id="heroHumidVal">52.8 <small>%</small></span>
+                        <span class="status-tag">NORMAL RH</span>
+                    </div>
+                    <div class="instrument-card-mini">
+                        <span class="label"><i class="fas fa-battery-three-quarters"></i> Li-ion Cell</span>
+                        <span class="val font-mono">94% <small>3.92V</small></span>
+                        <span class="status-tag">HEALTHY</span>
+                    </div>
+                </div>
+
+                <div class="instrument-footer-note">
+                    <i class="fas fa-shield-halved" style="color: var(--accent-cyan);"></i>
+                    <span>Emergency tripwire active: Automated Gmail dispatch on &ge; 1600 PPM</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================
+             SECTION 2: HARDWARE & SENSOR SUITE SHOWCASE
+             ============================================ -->
+        <section class="home-section" id="sensors">
+            <div class="section-head-center">
+                <div class="section-badge"><i class="fas fa-microchip"></i> Hardware Engineering</div>
+                <h2>Industrial-Grade Sensor Suite</h2>
+                <p>Every sensor is selected for low-noise precision, thermal stability, and immediate response to environmental anomalies.</p>
+            </div>
+
+            <div class="sensors-showcase-grid">
+                
+                <!-- Sensor 1: MQ-135 Gas Sensor -->
+                <div class="sensor-box">
+                    <div class="sensor-box-header">
+                        <div class="sensor-icon-plate">
+                            <i class="fas fa-smog" style="color: #10b981;"></i>
+                        </div>
+                        <span class="sensor-pin-chip font-mono">PIN: GPIO 34 (ADC1_CH6)</span>
+                    </div>
+                    <h3>MQ-135 Air Quality Sensor</h3>
+                    <div class="sensor-box-subtitle">Electrochemical Semiconductor Sensor</div>
+                    <p>
+                        Uses a micro-heated tin dioxide ($SnO_2$) sensing element. In clean air, conductivity is low. As hazardous gases increase, electrical resistance drops linearly, mapped directly through the ESP32's 12-bit ADC.
+                    </p>
+                    <div class="sensor-specs-table">
+                        <div class="spec-row">
+                            <span class="spec-key">Target Gases:</span>
+                            <span class="spec-val">$CO_2$, Smoke, VOCs, $NH_3$, Alcohol</span>
+                        </div>
+                        <div class="spec-row">
+                            <span class="spec-key">ADC Dynamic Range:</span>
+                            <span class="spec-val font-mono">0 to 4095 ADC Levels</span>
+                        </div>
+                        <div class="spec-row">
+                            <span class="spec-key">Preheat Operating Volts:</span>
+                            <span class="spec-val font-mono">5.0V with Divider Protection</span>
+                        </div>
+                    </div>
+                    <div class="sensor-trigger-pill">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <span>Emergency Tripwire: &ge; 1600 PPM (Automated Alert)</span>
+                    </div>
+                </div>
+
+                <!-- Sensor 2: DHT11 Environmental Sensor -->
+                <div class="sensor-box">
+                    <div class="sensor-box-header">
+                        <div class="sensor-icon-plate">
+                            <i class="fas fa-temperature-half" style="color: #f97316;"></i>
+                        </div>
+                        <span class="sensor-pin-chip font-mono">PIN: GPIO 4 (Digital 1-Wire)</span>
+                    </div>
+                    <h3>DHT11 Precision Climate</h3>
+                    <div class="sensor-box-subtitle">Calibrated Digital Moisture & Thermistor</div>
+                    <p>
+                        Features a calibrated digital signal output combining a precision NTC negative-temperature thermistor with a resistive-type humidity component. Communicates via a dedicated single-wire bi-directional digital bus.
+                    </p>
+                    <div class="sensor-specs-table">
+                        <div class="spec-row">
+                            <span class="spec-key">Temperature Range:</span>
+                            <span class="spec-val font-mono">0°C to 50°C (±2°C Accuracy)</span>
+                        </div>
+                        <div class="spec-row">
+                            <span class="spec-key">Humidity Range:</span>
+                            <span class="spec-val font-mono">20% to 90% RH (±5% Accuracy)</span>
+                        </div>
+                        <div class="spec-row">
+                            <span class="spec-key">Protocol Bus:</span>
+                            <span class="spec-val font-mono">Single-Bus Digital Serial</span>
+                        </div>
+                    </div>
+                    <div class="sensor-trigger-pill">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <span>Emergency Tripwire: &ge; 40.0°C or &ge; 88% Moisture</span>
+                    </div>
+                </div>
+
+                <!-- Sensor 3: ESP32 Microcontroller Core -->
+                <div class="sensor-box">
+                    <div class="sensor-box-header">
+                        <div class="sensor-icon-plate">
+                            <i class="fas fa-microchip" style="color: var(--accent-cyan);"></i>
+                        </div>
+                        <span class="sensor-pin-chip font-mono">CORE: Xtensa LX6 @ 240MHz</span>
+                    </div>
+                    <h3>ESP32 WROOM-32 IoT Core</h3>
+                    <div class="sensor-box-subtitle">Dual-Core 32-Bit Microprocessor</div>
+                    <p>
+                        The central nervous system. Executes non-blocking FreeRTOS telemetry tasks, samples analog voltages, manages Wi-Fi reconnection, and performs SSL handshakes to Google Firebase Realtime Database.
+                    </p>
+                    <div class="sensor-specs-table">
+                        <div class="spec-row">
+                            <span class="spec-key">Processing Core:</span>
+                            <span class="spec-val">Dual-Core 240MHz 32-Bit LX6</span>
+                        </div>
+                        <div class="spec-row">
+                            <span class="spec-key">Cloud Connectivity:</span>
+                            <span class="spec-val">2.4GHz 802.11 b/g/n Wi-Fi</span>
+                        </div>
+                        <div class="spec-row">
+                            <span class="spec-key">Pairing System:</span>
+                            <span class="spec-val">WiFiManager Auto-Captive Portal</span>
+                        </div>
+                    </div>
+                    <div class="sensor-trigger-pill" style="border-color: rgba(6, 182, 212, 0.4); background: rgba(6, 182, 212, 0.1); color: var(--accent-cyan);">
+                        <i class="fas fa-satellite-dish"></i>
+                        <span>Hardware BOOT button: 3s Wi-Fi memory wipe</span>
+                    </div>
+                </div>
+
+                <!-- Sensor 4: 18650 Li-ion Power System -->
+                <div class="sensor-box">
+                    <div class="sensor-box-header">
+                        <div class="sensor-icon-plate">
+                            <i class="fas fa-battery-three-quarters" style="color: #fbbf24;"></i>
+                        </div>
+                        <span class="sensor-pin-chip font-mono">PIN: GPIO 35 (ADC Divider)</span>
+                    </div>
+                    <h3>18650 Li-ion Autonomous Power</h3>
+                    <div class="sensor-box-subtitle">TP4056 Rechargeable Management</div>
+                    <p>
+                        Engineered for untethered wireless deployment. Powered by a high-capacity 18650 Lithium-ion cell managed by a TP4056 CC/CV charging module with DW01A overcharge and over-discharge protection circuitry.
+                    </p>
+                    <div class="sensor-specs-table">
+                        <div class="spec-row">
+                            <span class="spec-key">Cell Chemistry:</span>
+                            <span class="spec-val">3.7V / 4.2V 18650 Li-ion</span>
+                        </div>
+                        <div class="spec-row">
+                            <span class="spec-key">Charge Circuit:</span>
+                            <span class="spec-val">TP4056 with DW01A Protection</span>
+                        </div>
+                        <div class="spec-row">
+                            <span class="spec-key">Telemetry Divider:</span>
+                            <span class="spec-val font-mono">100kΩ / 100kΩ Precision Resistors</span>
+                        </div>
+                    </div>
+                    <div class="sensor-trigger-pill" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1); color: var(--accent-emerald);">
+                        <i class="fas fa-bolt"></i>
+                        <span>Live Cell Voltage: 3.20V (0%) to 4.20V (100%)</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ============================================
+             SECTION 3: DATAFLOW & SYSTEM OUTPUT ARCHITECTURE
+             ============================================ -->
+        <section class="home-section" id="architecture">
+            <div class="section-head-center">
+                <div class="section-badge"><i class="fas fa-diagram-project"></i> Pipeline Architecture</div>
+                <h2>From Physical Air to Customer Action</h2>
+                <p>Five interconnected architectural stages deliver end-to-end reliability from physical semiconductor reaction to live Gmail alert.</p>
+            </div>
+
+            <div class="architecture-timeline">
+                <div class="arch-card">
+                    <div class="arch-step-num font-mono">01</div>
+                    <div class="arch-icon"><i class="fas fa-microchip"></i></div>
+                    <h4>Edge Sensor Sampling</h4>
+                    <p>Every 3 seconds, the ESP32 samples DHT11 digital signals, MQ-135 analog voltage, and battery ADC divider without blocking operations.</p>
+                </div>
+
+                <div class="arch-card">
+                    <div class="arch-step-num font-mono">02</div>
+                    <div class="arch-icon"><i class="fas fa-cloud-arrow-up"></i></div>
+                    <h4>Firebase SSL Relay</h4>
+                    <p>Data packets are formatted in JSON and pushed via encrypted SSL token authentication to Google Firebase Realtime Database in milliseconds.</p>
+                </div>
+
+                <div class="arch-card">
+                    <div class="arch-step-num font-mono">03</div>
+                    <div class="arch-icon"><i class="fas fa-gauge-high"></i></div>
+                    <h4>Precision Vector Gauges</h4>
+                    <p>The web client updates mathematically calibrated SVG speedometers featuring cubic-bezier needle damping and centered display plates.</p>
+                </div>
+
+                <div class="arch-card">
+                    <div class="arch-step-num font-mono">04</div>
+                    <div class="arch-icon"><i class="fas fa-chart-line"></i></div>
+                    <h4>Live Waveform Analytics</h4>
+                    <p>Chart.js time-series plots stream the last 30 live readings in real-time, calculating instant Min, Max, and Rolling Averages.</p>
+                </div>
+
+                <div class="arch-card">
+                    <div class="arch-step-num font-mono">05</div>
+                    <div class="arch-icon"><i class="fas fa-triangle-exclamation" style="color: var(--emergency-crimson);"></i></div>
+                    <h4>Emergency Auto-Dispatch</h4>
+                    <p>If Gas &ge; 1600 PPM or Temp &ge; 40°C, the system trips the Black & Red emergency strobe, sounds an alarm siren, and sends alerts to Gmail via EmailJS.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================
+             SECTION 4: INTERACTIVE SENSOR SANDBOX / SIMULATOR
+             ============================================ -->
+        <section class="home-section" id="simulator">
+            <div class="section-head-center">
+                <div class="section-badge"><i class="fas fa-sliders"></i> Interactive Sandbox</div>
+                <h2>Test The Telemetry Engine Live</h2>
+                <p>Drag the sliders below to test how the speedometer instrumentation, safety status badges, and Emergency Black & Red UI respond in real time.</p>
+            </div>
+
+            <div class="simulator-box" id="sandboxCard">
+                <!-- Sliders Column -->
+                <div class="sim-controls">
+                    <div class="sim-control-group">
+                        <label>
+                            <span><i class="fas fa-smog"></i> Air Quality Gas (MQ-135)</span>
+                            <span class="font-mono" id="simGasLabel" style="color: #10b981;">450 PPM</span>
+                        </label>
+                        <input type="range" min="0" max="4095" value="450" class="sim-slider" id="simGasSlider" oninput="runSandboxSimulation()">
+                        <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-top: 4px;">
+                            <span>0 PPM (Clean)</span>
+                            <span style="color: var(--emergency-crimson);">1600+ PPM (Emergency Zone)</span>
+                            <span>4095 PPM</span>
+                        </div>
+                    </div>
+
+                    <div class="sim-control-group">
+                        <label>
+                            <span><i class="fas fa-temperature-half"></i> Temperature (DHT11)</span>
+                            <span class="font-mono" id="simTempLabel" style="color: #f97316;">26.0 °C</span>
+                        </label>
+                        <input type="range" min="0" max="50" step="0.5" value="26.0" class="sim-slider" id="simTempSlider" oninput="runSandboxSimulation()">
+                        <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-top: 4px;">
+                            <span>0°C (Cold)</span>
+                            <span style="color: var(--emergency-crimson);">40°C+ (Overheat Zone)</span>
+                            <span>50°C</span>
+                        </div>
+                    </div>
+
+                    <div class="sim-control-group">
+                        <label>
+                            <span><i class="fas fa-droplet"></i> Relative Moisture (DHT11)</span>
+                            <span class="font-mono" id="simHumidLabel" style="color: var(--accent-cyan);">55.0 %</span>
+                        </label>
+                        <input type="range" min="0" max="100" step="1" value="55" class="sim-slider" id="simHumidSlider" oninput="runSandboxSimulation()">
+                        <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-top: 4px;">
+                            <span>0% (Dry)</span>
+                            <span style="color: var(--emergency-crimson);">88%+ (Condensation Zone)</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Gauge Column -->
+                <div class="sim-preview-display">
+                    <div style="width: 240px; margin: 0 auto;">
+                        <svg class="gauge-svg" viewBox="0 0 200 160">
+                            <path class="gauge-bezel" d="M 21 105 A 79 79 0 0 1 179 105" />
+                            <path class="gauge-bg" d="M 25 105 A 75 75 0 0 1 175 105" />
+                            <path class="gauge-fill" id="simFill" d="M 25 105 A 75 75 0 0 1 175 105" style="stroke: #10b981; stroke-dasharray: 235.62; stroke-dashoffset: 190;" />
+                            <line class="gauge-needle" id="simNeedle" x1="100" y1="105" x2="100" y2="36" style="transform-origin: 100px 105px; transform: rotate(-55deg);" />
+                            <circle class="gauge-center-outer" cx="100" cy="105" r="9" />
+                            <circle class="gauge-center" cx="100" cy="105" r="4.5" />
+                            <text x="20" y="118" class="gauge-scale-label">SAFE</text>
+                            <text x="180" y="118" class="gauge-scale-label" text-anchor="end">HAZARD</text>
+                            
+                            <g class="gauge-readout-plate">
+                                <rect x="42" y="116" width="116" height="36" rx="8" class="gauge-display-plate" id="simPlate" />
+                                <text x="94" y="141" class="gauge-display-val font-mono" id="simValue" text-anchor="end">450</text>
+                                <text x="98" y="141" class="gauge-display-unit" id="simUnit" text-anchor="start">PPM</text>
+                            </g>
+                        </svg>
+                    </div>
+
+                    <div class="sim-badge" id="simStatusBadge">
+                        <i class="fas fa-circle-check"></i>
+                        <span>NORMAL SAFE PARAMETERS</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================
+             SECTION 5: WIRELESS PAIRING GUIDE SUMMARY
+             ============================================ -->
+        <section class="home-section" id="setup">
+            <div class="section-head-center">
+                <div class="section-badge"><i class="fas fa-wifi"></i> Zero-Configuration</div>
+                <h2>Simple 3-Step Wireless Pairing</h2>
+                <p>No hardcoded Wi-Fi credentials. Connect your ESP32 anywhere in less than 60 seconds.</p>
+            </div>
+
+            <div class="instructions-grid">
+                <div class="instruction-card">
+                    <div class="instruction-step-num font-mono">01</div>
+                    <div class="instruction-icon-wrap power-wrap"><i class="fas fa-power-off"></i></div>
+                    <h3>Power ON Monitor</h3>
+                    <p>Slide the physical battery switch to <strong>ON</strong>. The ESP32 boots up and initializes sensors.</p>
+                    <div class="instruction-tip">
+                        <i class="fas fa-circle-info"></i>
+                        <span>Hold <strong>BOOT</strong> button for 3 seconds to clear old router passwords.</span>
+                    </div>
+                </div>
+
+                <div class="instruction-card">
+                    <div class="instruction-step-num font-mono">02</div>
+                    <div class="instruction-icon-wrap wifi-wrap"><i class="fas fa-wifi"></i></div>
+                    <h3>Connect to Hotspot</h3>
+                    <p>On your phone or laptop, open Wi-Fi and connect to the device's setup hotspot:</p>
+                    <div class="instruction-hotspot-pill">
+                        <i class="fas fa-broadcast-tower"></i>
+                        <code class="font-mono">AirQuality-Setup</code>
+                    </div>
+                    <div class="instruction-tip">
+                        <i class="fas fa-shield-halved"></i>
+                        <span>Open hotspot without password.</span>
+                    </div>
+                </div>
+
+                <div class="instruction-card">
+                    <div class="instruction-step-num font-mono">03</div>
+                    <div class="instruction-icon-wrap config-wrap"><i class="fas fa-sliders"></i></div>
+                    <h3>Save Your Network</h3>
+                    <p>The captive setup page opens automatically, or open <strong>192.168.4.1</strong> directly in your browser:</p>
+                    <a href="http://192.168.4.1" target="_blank" class="instruction-link-btn">
+                        <i class="fas fa-arrow-up-right-from-square"></i> Open 192.168.4.1
+                    </a>
+                    <div class="instruction-tip">
+                        <i class="fas fa-circle-check"></i>
+                        <span>Select your Wi-Fi, enter password, and save. The ESP32 connects permanently.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================
+             SECTION 6: SIGN IN & ACCESS SECTION
+             ============================================ -->
+        <section class="home-section" id="login" style="padding-bottom: 90px;">
+            <div class="home-login-card">
+                <div class="sensor-icon-plate" style="margin: 0 auto 20px auto; width: 64px; height: 64px; font-size: 26px;">
+                    <i class="fas fa-envelope-shield" style="color: var(--accent-cyan); display: none;"></i>
+                    <i class="fas fa-triangle-exclamation" style="color: #fbbf24;"></i>
+                </div>
+                <h3>Ready to Monitor Your Air?</h3>
+                <p>
+                    Sign in with your Google account. The system automatically registers your email into Firebase and activates your 24/7 automated emergency alerts.
+                </p>
+                <div style="display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;">
+                    <button class="google-btn" onclick="signInWithGoogle()" style="max-width: 280px;">
+                        <svg width="20" height="20" viewBox="0 0 48 48">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                        </svg>
+                        <span>Sign in with Google</span>
+                    </button>
+                    <a href="dashboard.html" class="btn-matte-silver" style="padding: 14px 24px; font-size: 14px;">
+                        <span>Direct Live View</span> <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Matte PCB Footer -->
+    <footer class="home-footer">
+        <div style="max-width: 1280px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+                <strong style="color: #ffffff; letter-spacing: 0.5px;">AEROMONITOR</strong> &bull; ESP32 IoT Enterprise Telemetry &bull; Matte PCB Edition
+            </div>
+            <div>
+                <a href="#sensors" style="margin-right: 18px;">Hardware Specs</a>
+                <a href="#architecture" style="margin-right: 18px;">Pipeline</a>
+                <a href="dashboard.html" style="margin-right: 18px;">Dashboard</a>
+                <a href="login.html">Sign In</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/pcb-canvas.js"></script>
+
+    <!-- Sandbox Simulation Script -->
+    <script>
+        const ARC_LEN = 235.62;
+
+        function runSandboxSimulation() {
+            const gas = Number(document.getElementById('simGasSlider').value);
+            const temp = Number(document.getElementById('simTempSlider').value);
+            const humid = Number(document.getElementById('simHumidSlider').value);
+
+            document.getElementById('simGasLabel').textContent = gas + ' PPM';
+            document.getElementById('simTempLabel').textContent = temp.toFixed(1) + ' °C';
+            document.getElementById('simHumidLabel').textContent = humid.toFixed(1) + ' %';
+
+            // Check emergency thresholds
+            const isHazard = gas >= 1600 || temp >= 40.0 || humid >= 88.0;
+
+            const card = document.getElementById('sandboxCard');
+            const needle = document.getElementById('simNeedle');
+            const fill = document.getElementById('simFill');
+            const val = document.getElementById('simValue');
+            const badge = document.getElementById('simStatusBadge');
+
+            // Normalized to gas representation for main gauge preview
+            const percent = Math.min(1, Math.max(0, gas / 4095));
+            const angle = -90 + (percent * 180);
+
+            needle.style.transform = `rotate(${angle.toFixed(1)}deg)`;
+            fill.style.strokeDashoffset = (ARC_LEN * (1 - percent)).toFixed(1);
+            val.textContent = Math.round(gas);
+
+            if (isHazard) {
+                card.classList.add('sim-emergency');
+                fill.style.stroke = '#ff1744';
+                needle.style.stroke = '#ff1744';
+                badge.className = 'sim-badge danger';
+                badge.innerHTML = `<i class="fas fa-triangle-exclamation"></i> <span>EMERGENCY HAZARD DETECTED! (Gas: ${gas} PPM, Temp: ${temp}°C)</span>`;
+            } else {
+                card.classList.remove('sim-emergency');
+                fill.style.stroke = percent > 0.4 ? '#f59e0b' : '#10b981';
+                needle.style.stroke = '#f8fafc';
+                badge.className = 'sim-badge';
+                badge.innerHTML = `<i class="fas fa-circle-check"></i> <span>NORMAL SAFE PARAMETERS</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
