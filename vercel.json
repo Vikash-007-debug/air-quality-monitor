@@ -1,0 +1,13 @@
+{
+    "version": 2,
+    "name": "air-quality-monitor",
+    "builds": [
+        {
+            "src": "**/*.html",
+            "use": "@vercel/static"
+        }
+    ],
+    "routes": [
+        { "src": "/", "dest": "/index.html" }
+    ]
+}

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Air Quality Monitor</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="dashboard-page">
+
+    <!-- Top Navbar -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <i class="fas fa-wind"></i>
+            <span>Air Quality Monitor</span>
+        </div>
+        <div class="nav-right">
+            <div class="connection-status" id="connectionStatus">
+                <span class="status-dot offline"></span>
+                <span class="status-text">Disconnected</span>
+            </div>
+            <div class="user-info" id="userInfo">
+                <img id="userPhoto" src="" alt="User" class="user-avatar">
+                <span id="userName" class="user-name"></span>
+            </div>
+            <button class="logout-btn" onclick="signOutUser()" title="Sign Out">
+                <i class="fas fa-right-from-bracket"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Dashboard Content -->
+    <main class="dashboard-content">
+
+        <!-- Status Banner -->
+        <div class="status-banner" id="statusBanner">
+            <i class="fas fa-circle-info"></i>
+            <span id="statusMessage">Waiting for ESP32 sensor data...</span>
+        </div>
+
+        <!-- Speedometer Gauges Section -->
+        <section class="gauges-section">
+
+            <!-- Temperature Gauge -->
+            <div class="gauge-card" id="tempCard">
+                <h3 class="gauge-title"><i class="fas fa-temperature-half"></i> Temperature</h3>
+                <div class="gauge-wrapper">
+                    <svg class="gauge-svg" viewBox="0 0 200 130">
+                        <!-- Background Arc -->
+                        <path class="gauge-bg" d="M 20 120 A 80 80 0 0 1 180 120" />
+                        <!-- Colored Arc (filled based on value) -->
+                        <path class="gauge-fill temp-fill" id="tempFill" d="M 20 120 A 80 80 0 0 1 180 120" />
+                        <!-- Needle -->
+                        <line class="gauge-needle" id="tempNeedle" x1="100" y1="120" x2="100" y2="45" />
+                        <!-- Center Circle -->
+                        <circle class="gauge-center" cx="100" cy="120" r="6" />
+                        <!-- Min/Max Labels -->
+                        <text x="18" y="128" class="gauge-label">0°C</text>
+                        <text x="165" y="128" class="gauge-label">50°C</text>
+                    </svg>
+                    <div class="gauge-value">
+                        <span class="value-number" id="tempValue">--</span>
+                        <span class="value-unit">°C</span>
+                    </div>
+                </div>
+                <div class="gauge-status" id="tempStatus">No Data</div>
+            </div>
+
+            <!-- Humidity Gauge -->
+            <div class="gauge-card" id="humidCard">
+                <h3 class="gauge-title"><i class="fas fa-droplet"></i> Humidity</h3>
+                <div class="gauge-wrapper">
+                    <svg class="gauge-svg" viewBox="0 0 200 130">
+                        <path class="gauge-bg" d="M 20 120 A 80 80 0 0 1 180 120" />
+                        <path class="gauge-fill humid-fill" id="humidFill" d="M 20 120 A 80 80 0 0 1 180 120" />
+                        <line class="gauge-needle" id="humidNeedle" x1="100" y1="120" x2="100" y2="45" />
+                        <circle class="gauge-center" cx="100" cy="120" r="6" />
+                        <text x="18" y="128" class="gauge-label">0%</text>
+                        <text x="170" y="128" class="gauge-label">100%</text>
+                    </svg>
+                    <div class="gauge-value">
+                        <span class="value-number" id="humidValue">--</span>
+                        <span class="value-unit">%</span>
+                    </div>
+                </div>
+                <div class="gauge-status" id="humidStatus">No Data</div>
+            </div>
+
+            <!-- Gas / Air Quality Gauge -->
+            <div class="gauge-card" id="gasCard">
+                <h3 class="gauge-title"><i class="fas fa-smog"></i> Air Quality (Gas)</h3>
+                <div class="gauge-wrapper">
+                    <svg class="gauge-svg" viewBox="0 0 200 130">
+                        <path class="gauge-bg" d="M 20 120 A 80 80 0 0 1 180 120" />
+                        <path class="gauge-fill gas-fill" id="gasFill" d="M 20 120 A 80 80 0 0 1 180 120" />
+                        <line class="gauge-needle" id="gasNeedle" x1="100" y1="120" x2="100" y2="45" />
+                        <circle class="gauge-center" cx="100" cy="120" r="6" />
+                        <text x="12" y="128" class="gauge-label">0</text>
+                        <text x="160" y="128" class="gauge-label">4095</text>
+                    </svg>
+                    <div class="gauge-value">
+                        <span class="value-number" id="gasValue">--</span>
+                        <span class="value-unit">PPM</span>
+                    </div>
+                </div>
+                <div class="gauge-status" id="gasStatus">No Data</div>
+            </div>
+
+        </section>
+
+        <!-- Battery & Additional Info -->
+        <section class="info-section">
+            <div class="info-card">
+                <div class="info-icon battery-icon">
+                    <i class="fas fa-battery-three-quarters" id="batteryIcon"></i>
+                </div>
+                <div class="info-details">
+                    <span class="info-label">Battery Level</span>
+                    <div class="battery-bar-container">
+                        <div class="battery-bar" id="batteryBar" style="width: 0%"></div>
+                    </div>
+                    <span class="info-value" id="batteryValue">--%</span>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="info-details">
+                    <span class="info-label">Last Updated</span>
+                    <span class="info-value" id="lastUpdated">Never</span>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-icon">
+                    <i class="fas fa-microchip"></i>
+                </div>
+                <div class="info-details">
+                    <span class="info-label">Device</span>
+                    <span class="info-value">ESP32 WROOM-32</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
