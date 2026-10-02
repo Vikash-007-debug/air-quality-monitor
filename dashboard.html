@@ -7,16 +7,38 @@
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- EmailJS SDK for direct email notification to logged-in user -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
-<body class="dashboard-page">
+<body class="dashboard-page" id="dashboardBody">
+
+    <!-- Top Emergency Strobe Banner (Appears during Emergency) -->
+    <div class="emergency-bar" id="emergencyBar">
+        <div class="emergency-content">
+            <span class="emergency-siren"><i class="fas fa-triangle-exclamation"></i></span>
+            <div class="emergency-text-group">
+                <strong id="emergencyTitle">CRITICAL AIR EMERGENCY DETECTED!</strong>
+                <span id="emergencySub">Dangerous sensor levels measured. Notification dispatched to your email.</span>
+            </div>
+            <div class="emergency-actions">
+                <button class="emergency-btn mute-btn" id="muteAlarmBtn" onclick="toggleMuteAudio()">
+                    <i class="fas fa-volume-high" id="muteIcon"></i> <span id="muteText">Mute</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Top Navbar -->
-    <nav class="navbar">
+    <nav class="navbar" id="topNavbar">
         <div class="nav-brand">
-            <i class="fas fa-wind"></i>
+            <i class="fas fa-wind" id="brandIcon"></i>
             <span>Air Quality Monitor</span>
         </div>
         <div class="nav-right">
+            <!-- Test Simulator Button to preview Emergency Mode anytime -->
+            <button class="sim-btn" id="simEmergencyBtn" onclick="toggleEmergencySimulation()" title="Test emergency UI and email">
+                <i class="fas fa-bolt"></i> <span>Test Emergency UI</span>
+            </button>
             <div class="connection-status" id="connectionStatus">
                 <span class="status-dot offline"></span>
                 <span class="status-text">Disconnected</span>
@@ -36,7 +58,7 @@
 
         <!-- Status Banner -->
         <div class="status-banner" id="statusBanner">
-            <i class="fas fa-circle-info"></i>
+            <i class="fas fa-circle-info" id="bannerIcon"></i>
             <span id="statusMessage">Waiting for ESP32 sensor data...</span>
         </div>
 
@@ -45,7 +67,11 @@
 
             <!-- Temperature Gauge -->
             <div class="gauge-card" id="tempCard">
-                <h3 class="gauge-title"><i class="fas fa-temperature-half"></i> Temperature</h3>
+                <div class="card-glow-layer"></div>
+                <div class="gauge-card-header">
+                    <h3 class="gauge-title"><i class="fas fa-temperature-half"></i> Temperature</h3>
+                    <span class="alert-indicator" id="tempAlertIndicator"><i class="fas fa-triangle-exclamation"></i> HIGH</span>
+                </div>
                 <div class="gauge-wrapper">
                     <svg class="gauge-svg" viewBox="0 0 200 130">
                         <!-- Background Arc -->
@@ -70,7 +96,11 @@
 
             <!-- Humidity Gauge -->
             <div class="gauge-card" id="humidCard">
-                <h3 class="gauge-title"><i class="fas fa-droplet"></i> Humidity</h3>
+                <div class="card-glow-layer"></div>
+                <div class="gauge-card-header">
+                    <h3 class="gauge-title"><i class="fas fa-droplet"></i> Humidity</h3>
+                    <span class="alert-indicator" id="humidAlertIndicator"><i class="fas fa-triangle-exclamation"></i> HIGH</span>
+                </div>
                 <div class="gauge-wrapper">
                     <svg class="gauge-svg" viewBox="0 0 200 130">
                         <path class="gauge-bg" d="M 20 120 A 80 80 0 0 1 180 120" />
@@ -90,7 +120,11 @@
 
             <!-- Gas / Air Quality Gauge -->
             <div class="gauge-card" id="gasCard">
-                <h3 class="gauge-title"><i class="fas fa-smog"></i> Air Quality (Gas)</h3>
+                <div class="card-glow-layer"></div>
+                <div class="gauge-card-header">
+                    <h3 class="gauge-title"><i class="fas fa-smog"></i> Air Quality (Gas)</h3>
+                    <span class="alert-indicator" id="gasAlertIndicator"><i class="fas fa-skull-crossbones"></i> HAZARD</span>
+                </div>
                 <div class="gauge-wrapper">
                     <svg class="gauge-svg" viewBox="0 0 200 130">
                         <path class="gauge-bg" d="M 20 120 A 80 80 0 0 1 180 120" />
@@ -127,6 +161,16 @@
 
             <div class="info-card">
                 <div class="info-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="info-details">
+                    <span class="info-label">Email Alert Dispatch</span>
+                    <span class="info-value email-value" id="emailDispatchStatus">Ready (Listening)</span>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-icon">
                     <i class="fas fa-clock"></i>
                 </div>
                 <div class="info-details">
@@ -147,6 +191,15 @@
         </section>
 
     </main>
+
+    <!-- Email Notification Toast Floating Box -->
+    <div class="email-toast" id="emailToast">
+        <i class="fas fa-envelope-circle-check"></i>
+        <div class="toast-text">
+            <strong>Emergency Email Dispatched</strong>
+            <span id="emailToastAddress">Sent alert to user@gmail.com</span>
+        </div>
+    </div>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
