@@ -565,12 +565,14 @@ sensorRef.on('value', (snapshot) => {
             updateBattery(data.battery);
         }
 
-        // Update modal pairing status if open
-        const modalDot = document.getElementById('modalStatusDot');
-        const modalText = document.getElementById('modalStatusText');
-        if (modalDot && modalText) {
-            modalDot.className = 'status-dot online';
-            modalText.innerHTML = '<strong style="color: #22c55e;">Device Connected!</strong> Sensor data is actively syncing.';
+        // Update live status card in instructions tab
+        const instDot = document.getElementById('instructionStatusDot');
+        const instTitle = document.getElementById('instructionStatusTitle');
+        const instDesc = document.getElementById('instructionStatusDesc');
+        if (instDot && instTitle && instDesc) {
+            instDot.className = 'status-dot online';
+            instTitle.textContent = 'Device Connected & Active';
+            instDesc.textContent = 'ESP32 is transmitting real-time air quality telemetry.';
         }
 
         // Update timestamp
@@ -591,17 +593,23 @@ connectedRef.on('value', (snap) => {
 });
 
 // ============================================
-// ADD DEVICE MODAL CONTROLS
+// DASHBOARD NAVIGATION TAB SWITCHER
 // ============================================
-function openAddDeviceModal() {
-    const modal = document.getElementById('addDeviceModal');
-    if (modal) modal.classList.add('show');
-}
+function switchDashboardTab(tabName) {
+    const tabDashboardBtn = document.getElementById('tabDashboardBtn');
+    const tabInstructionsBtn = document.getElementById('tabInstructionsBtn');
+    const viewDashboard = document.getElementById('viewDashboard');
+    const viewInstructions = document.getElementById('viewInstructions');
 
-function closeAddDeviceModal(event) {
-    if (event && event.target && !event.target.classList.contains('modal-overlay') && !event.target.classList.contains('modal-close-btn')) {
-        return;
+    if (tabName === 'dashboard') {
+        tabDashboardBtn.classList.add('active');
+        tabInstructionsBtn.classList.remove('active');
+        viewDashboard.style.display = 'block';
+        viewInstructions.style.display = 'none';
+    } else {
+        tabInstructionsBtn.classList.add('active');
+        tabDashboardBtn.classList.remove('active');
+        viewDashboard.style.display = 'none';
+        viewInstructions.style.display = 'block';
     }
-    const modal = document.getElementById('addDeviceModal');
-    if (modal) modal.classList.remove('show');
 }
