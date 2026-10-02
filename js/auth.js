@@ -1,5 +1,6 @@
 // ============================================
 // Firebase Authentication (Google Sign-In)
+// Automatically registers user email for alerts
 // ============================================
 
 /**
@@ -11,6 +12,16 @@ function signInWithGoogle() {
     auth.signInWithPopup(provider)
         .then((result) => {
             console.log("Signed in as:", result.user.displayName);
+            
+            // Automatically register customer's email in Firebase for alerts
+            if (result.user && result.user.email) {
+                database.ref('alert_settings').update({
+                    recipient_email: result.user.email,
+                    recipient_name: result.user.displayName || "Customer",
+                    last_login: new Date().toISOString()
+                });
+            }
+
             // Redirect to dashboard after successful login
             window.location.href = "dashboard.html";
         })
@@ -36,8 +47,6 @@ function signOutUser() {
 
 /**
  * Monitor authentication state changes
- * - On login page: if already signed in, redirect to dashboard
- * - On dashboard page: if not signed in, redirect to login
  */
 auth.onAuthStateChanged((user) => {
     const currentPage = window.location.pathname;
@@ -45,11 +54,15 @@ auth.onAuthStateChanged((user) => {
     const isDashboardPage = currentPage.endsWith("dashboard.html");
 
     if (user) {
-        // User is signed in
         console.log("User authenticated:", user.email);
 
+        // Ensure current logged-in customer's email is set as active alert recipient
+        database.ref('alert_settings').update({
+            recipient_email: user.email,
+            recipient_name: user.displayName || "Customer"
+        });
+
         if (isLoginPage) {
-            // Already logged in, redirect to dashboard
             window.location.href = "dashboard.html";
         }
 
@@ -66,9 +79,7 @@ auth.onAuthStateChanged((user) => {
             }
         }
     } else {
-        // User is NOT signed in
         if (isDashboardPage) {
-            // Redirect to login page
             window.location.href = "index.html";
         }
     }
