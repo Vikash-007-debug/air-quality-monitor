@@ -3,6 +3,9 @@
 // Automatically registers user email for alerts
 // ============================================
 
+/**
+ * Sign in the user with Google popup
+ */
 function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     
@@ -10,6 +13,7 @@ function signInWithGoogle() {
         .then((result) => {
             console.log("Signed in as:", result.user.displayName);
             
+            // Automatically register customer's email in Firebase for alerts
             if (result.user && result.user.email) {
                 database.ref('alert_settings').update({
                     recipient_email: result.user.email,
@@ -18,6 +22,7 @@ function signInWithGoogle() {
                 });
             }
 
+            // Redirect to dashboard after successful login
             window.location.href = "dashboard.html";
         })
         .catch((error) => {
@@ -26,9 +31,13 @@ function signInWithGoogle() {
         });
 }
 
+/**
+ * Sign out the current user
+ */
 function signOutUser() {
     auth.signOut()
         .then(() => {
+            console.log("Signed out successfully");
             window.location.href = "index.html";
         })
         .catch((error) => {
@@ -36,24 +45,45 @@ function signOutUser() {
         });
 }
 
+/**
+ * Monitor authentication state changes
+ */
 auth.onAuthStateChanged((user) => {
     const currentPage = window.location.pathname;
-    const isLoginPage = currentPage.endsWith("index.html") || currentPage.endsWith("/");
+    const isDedicatedLoginPage = currentPage.endsWith("login.html");
     const isDashboardPage = currentPage.endsWith("dashboard.html");
+    const isHomePage = currentPage.endsWith("index.html") || currentPage.endsWith("/") || currentPage.endsWith("home.html");
 
     if (user) {
         console.log("User authenticated:", user.email);
 
+        // Ensure current logged-in customer's email is set as active alert recipient
         database.ref('alert_settings').update({
             recipient_email: user.email,
-            recipient_name: user.displayName || "Customer"
+            recipient_name: user.displayName || "Customer",
+            last_active: new Date().toISOString()
         });
 
-        if (isLoginPage) {
+        // Dedicated login page redirects straight to dashboard
+        if (isDedicatedLoginPage) {
             window.location.href = "dashboard.html";
         }
 
+        // On Home page: update navbar to show authenticated status & Dashboard CTA
+        if (isHomePage) {
+            const homeAuthBtn = document.getElementById("homeAuthBtn");
+            if (homeAuthBtn) {
+                homeAuthBtn.innerHTML = `
+                    <img src="${user.photoURL || 'https://ui-avatars.com/api/?name=User'}" class="user-avatar" style="width: 24px; height: 24px; margin-right: 6px;" alt="Avatar">
+                    <span>Dashboard (${user.displayName ? user.displayName.split(' ')[0] : 'User'})</span>
+                `;
+                homeAuthBtn.onclick = () => { window.location.href = "dashboard.html"; };
+                homeAuthBtn.className = "btn-matte-primary";
+            }
+        }
+
         if (isDashboardPage) {
+            // Update user info in navbar
             const userPhoto = document.getElementById("userPhoto");
             const userName = document.getElementById("userName");
             
@@ -71,7 +101,7 @@ auth.onAuthStateChanged((user) => {
         }
     } else {
         if (isDashboardPage) {
-            window.location.href = "index.html";
+            window.location.href = "login.html";
         }
     }
 });

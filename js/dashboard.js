@@ -315,6 +315,10 @@ function applyEmergencyState(state) {
             safetyStateEl.style.color = '#ff1744';
         }
 
+        // Update Emergency Alert Dispatch Box Icon to strobe red
+        const dispatchIcon = document.getElementById('dispatchIconBox');
+        if (dispatchIcon) dispatchIcon.classList.add('active-alert');
+
         // Start Web Audio Siren
         startAudioAlert();
 
@@ -331,6 +335,14 @@ function applyEmergencyState(state) {
         if (gasCard) gasCard.classList.remove('emergency-blink');
         if (tempCard) tempCard.classList.remove('emergency-blink');
         if (humidCard) humidCard.classList.remove('emergency-blink');
+
+        const dispatchIcon = document.getElementById('dispatchIconBox');
+        if (dispatchIcon) dispatchIcon.classList.remove('active-alert');
+
+        const emailStatus = document.getElementById('emailDispatchStatus');
+        if (emailStatus && emailStatus.textContent.includes('Dispatched')) {
+            emailStatus.textContent = 'Ready & Listening';
+        }
 
         stopAudioAlert();
 
