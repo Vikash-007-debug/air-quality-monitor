@@ -367,15 +367,16 @@ function triggerEmergencyEmailNotification(incidentDetails) {
 
     const emailPayload = {
         access_key: WEB3FORMS_ACCESS_KEY,
-        subject: "🚨 CRITICAL AIR QUALITY EMERGENCY DETECTED!",
-        from_name: "ESP32 Air Quality Monitor",
+        subject: "Air Quality Alert: High Sensor Reading Detected",
+        from_name: "ESP32 Monitor Notification",
         to_email: targetEmail,
         reply_to: targetEmail,
-        message: `EMERGENCY AIR HAZARD ALERT!\n\n` +
-                 `Incident Details: ${incidentDetails}\n` +
-                 `Triggered at: ${new Date().toLocaleString()}\n\n` +
-                 `Immediate action required! Please ventilate the room and verify safety.\n` +
-                 `Live Dashboard: https://air-quality-monitor-delta.vercel.app`
+        message: `Hello,\n\n` +
+            `Your ESP32 Air Quality Monitor has detected an abnormal environmental reading:\n\n` +
+            `Condition: ${incidentDetails}\n` +
+            `Time: ${new Date().toLocaleString()}\n\n` +
+            `Please check room ventilation and safety.\n` +
+            `Live Dashboard: https://air-quality-monitor-delta.vercel.app`
     };
 
     fetch("https://api.web3forms.com/submit", {
