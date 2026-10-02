@@ -15,6 +15,8 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="dashboard-page theme-silver" id="dashboardBody">
+    <!-- Interactive Silver PCB Trace Canvas (Highlights Under Cursor) -->
+    <canvas id="pcbCircuitCanvas" class="pcb-circuit-canvas"></canvas>
 
     <!-- Top Emergency Strobe Banner (Triggers in Black & Red Mode) -->
     <div class="emergency-bar" id="emergencyBar">
@@ -599,6 +601,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
     <script src="js/firebase-config.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/pcb-canvas.js"></script>
     <script src="js/dashboard.js"></script>
 </body>
 </html>

@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="home-page theme-silver">
+    <!-- Interactive Silver PCB Trace Canvas (Highlights Under Cursor) -->
+    <canvas id="pcbCircuitCanvas" class="pcb-circuit-canvas"></canvas>
 
     <!-- Top Navigation Bar (Matte Obsidian & Silver PCB) -->
     <header class="home-nav">
@@ -385,30 +387,115 @@
                     </div>
                 </div>
 
-                <!-- Preview Gauge Column -->
+                <!-- Preview Gauges Column (3-Gauge Live Cluster) -->
                 <div class="sim-preview-display">
-                    <div style="width: 240px; margin: 0 auto;">
-                        <svg class="gauge-svg" viewBox="0 0 200 160">
-                            <path class="gauge-bezel" d="M 21 105 A 79 79 0 0 1 179 105" />
-                            <path class="gauge-bg" d="M 25 105 A 75 75 0 0 1 175 105" />
-                            <path class="gauge-fill" id="simFill" d="M 25 105 A 75 75 0 0 1 175 105" style="stroke: #10b981; stroke-dasharray: 235.62; stroke-dashoffset: 190;" />
-                            <line class="gauge-needle" id="simNeedle" x1="100" y1="105" x2="100" y2="36" style="transform-origin: 100px 105px; transform: rotate(-55deg);" />
-                            <circle class="gauge-center-outer" cx="100" cy="105" r="9" />
-                            <circle class="gauge-center" cx="100" cy="105" r="4.5" />
-                            <text x="20" y="118" class="gauge-scale-label">SAFE</text>
-                            <text x="180" y="118" class="gauge-scale-label" text-anchor="end">HAZARD</text>
-                            
-                            <g class="gauge-readout-plate">
-                                <rect x="42" y="116" width="116" height="36" rx="8" class="gauge-display-plate" id="simPlate" />
-                                <text x="94" y="141" class="gauge-display-val font-mono" id="simValue" text-anchor="end">450</text>
-                                <text x="98" y="141" class="gauge-display-unit" id="simUnit" text-anchor="start">PPM</text>
-                            </g>
-                        </svg>
+                    <div class="sim-gauges-cluster">
+
+                        <!-- Gas Gauge Card -->
+                        <div class="sim-gauge-card" id="simGasCard">
+                            <div class="sim-gauge-title">
+                                <i class="fas fa-smog" style="color: #10b981;"></i> <span>Gas (MQ-135)</span>
+                            </div>
+                            <svg class="gauge-svg" viewBox="0 0 200 160">
+                                <path class="gauge-bezel" d="M 21 105 A 79 79 0 0 1 179 105" />
+                                <path class="gauge-bg" d="M 25 105 A 75 75 0 0 1 175 105" />
+                                <g class="gauge-ticks">
+                                    <line x1="25" y1="105" x2="32" y2="105" class="tick" />
+                                    <line x1="35.0" y1="67.5" x2="41.1" y2="71.0" class="tick" />
+                                    <line x1="62.5" y1="40.0" x2="66.0" y2="46.1" class="tick" />
+                                    <line x1="100" y1="30" x2="100" y2="37" class="tick" />
+                                    <line x1="137.5" y1="40.0" x2="134.0" y2="46.1" class="tick" />
+                                    <line x1="165.0" y1="67.5" x2="158.9" y2="71.0" class="tick" />
+                                    <line x1="175" y1="105" x2="168" y2="105" class="tick" />
+                                </g>
+                                <path class="gauge-fill" id="simGasFill" d="M 25 105 A 75 75 0 0 1 175 105" style="stroke: #10b981; stroke-dasharray: 235.62; stroke-dashoffset: 209;" />
+                                <line class="gauge-needle" id="simGasNeedle" x1="100" y1="105" x2="100" y2="36" style="transform-origin: 100px 105px; transform: rotate(-70deg);" />
+                                <circle class="gauge-center-outer" cx="100" cy="105" r="9" />
+                                <circle class="gauge-center" cx="100" cy="105" r="4.5" />
+                                <text x="20" y="118" class="gauge-scale-label">0</text>
+                                <text x="180" y="118" class="gauge-scale-label" text-anchor="end">4095</text>
+                                
+                                <g class="gauge-readout-plate">
+                                    <rect x="42" y="116" width="116" height="36" rx="8" class="gauge-display-plate" />
+                                    <text x="94" y="141" class="gauge-display-val font-mono" id="simGasVal" text-anchor="end">450</text>
+                                    <text x="98" y="141" class="gauge-display-unit" text-anchor="start">PPM</text>
+                                </g>
+                            </svg>
+                            <span class="sim-mini-status good" id="simGasStatus">Safe (Clean)</span>
+                        </div>
+
+                        <!-- Temperature Gauge Card -->
+                        <div class="sim-gauge-card" id="simTempCard">
+                            <div class="sim-gauge-title">
+                                <i class="fas fa-temperature-half" style="color: #f97316;"></i> <span>Temp (DHT11)</span>
+                            </div>
+                            <svg class="gauge-svg" viewBox="0 0 200 160">
+                                <path class="gauge-bezel" d="M 21 105 A 79 79 0 0 1 179 105" />
+                                <path class="gauge-bg" d="M 25 105 A 75 75 0 0 1 175 105" />
+                                <g class="gauge-ticks">
+                                    <line x1="25" y1="105" x2="32" y2="105" class="tick" />
+                                    <line x1="35.0" y1="67.5" x2="41.1" y2="71.0" class="tick" />
+                                    <line x1="62.5" y1="40.0" x2="66.0" y2="46.1" class="tick" />
+                                    <line x1="100" y1="30" x2="100" y2="37" class="tick" />
+                                    <line x1="137.5" y1="40.0" x2="134.0" y2="46.1" class="tick" />
+                                    <line x1="165.0" y1="67.5" x2="158.9" y2="71.0" class="tick" />
+                                    <line x1="175" y1="105" x2="168" y2="105" class="tick" />
+                                </g>
+                                <path class="gauge-fill" id="simTempFill" d="M 25 105 A 75 75 0 0 1 175 105" style="stroke: #10b981; stroke-dasharray: 235.62; stroke-dashoffset: 113;" />
+                                <line class="gauge-needle" id="simTempNeedle" x1="100" y1="105" x2="100" y2="36" style="transform-origin: 100px 105px; transform: rotate(3.6deg);" />
+                                <circle class="gauge-center-outer" cx="100" cy="105" r="9" />
+                                <circle class="gauge-center" cx="100" cy="105" r="4.5" />
+                                <text x="20" y="118" class="gauge-scale-label">0°C</text>
+                                <text x="180" y="118" class="gauge-scale-label" text-anchor="end">50°C</text>
+                                
+                                <g class="gauge-readout-plate">
+                                    <rect x="46" y="116" width="108" height="36" rx="8" class="gauge-display-plate" />
+                                    <text x="96" y="141" class="gauge-display-val font-mono" id="simTempVal" text-anchor="end">26.0</text>
+                                    <text x="100" y="141" class="gauge-display-unit" text-anchor="start">°C</text>
+                                </g>
+                            </svg>
+                            <span class="sim-mini-status good" id="simTempStatus">Optimal (26°C)</span>
+                        </div>
+
+                        <!-- Humidity Gauge Card -->
+                        <div class="sim-gauge-card" id="simHumidCard">
+                            <div class="sim-gauge-title">
+                                <i class="fas fa-droplet" style="color: var(--accent-cyan);"></i> <span>Humidity (DHT11)</span>
+                            </div>
+                            <svg class="gauge-svg" viewBox="0 0 200 160">
+                                <path class="gauge-bezel" d="M 21 105 A 79 79 0 0 1 179 105" />
+                                <path class="gauge-bg" d="M 25 105 A 75 75 0 0 1 175 105" />
+                                <g class="gauge-ticks">
+                                    <line x1="25" y1="105" x2="32" y2="105" class="tick" />
+                                    <line x1="35.0" y1="67.5" x2="41.1" y2="71.0" class="tick" />
+                                    <line x1="62.5" y1="40.0" x2="66.0" y2="46.1" class="tick" />
+                                    <line x1="100" y1="30" x2="100" y2="37" class="tick" />
+                                    <line x1="137.5" y1="40.0" x2="134.0" y2="46.1" class="tick" />
+                                    <line x1="165.0" y1="67.5" x2="158.9" y2="71.0" class="tick" />
+                                    <line x1="175" y1="105" x2="168" y2="105" class="tick" />
+                                </g>
+                                <path class="gauge-fill" id="simHumidFill" d="M 25 105 A 75 75 0 0 1 175 105" style="stroke: #06b6d4; stroke-dasharray: 235.62; stroke-dashoffset: 106;" />
+                                <line class="gauge-needle" id="simHumidNeedle" x1="100" y1="105" x2="100" y2="36" style="transform-origin: 100px 105px; transform: rotate(9deg);" />
+                                <circle class="gauge-center-outer" cx="100" cy="105" r="9" />
+                                <circle class="gauge-center" cx="100" cy="105" r="4.5" />
+                                <text x="20" y="118" class="gauge-scale-label">0%</text>
+                                <text x="180" y="118" class="gauge-scale-label" text-anchor="end">100%</text>
+                                
+                                <g class="gauge-readout-plate">
+                                    <rect x="46" y="116" width="108" height="36" rx="8" class="gauge-display-plate" />
+                                    <text x="96" y="141" class="gauge-display-val font-mono" id="simHumidVal" text-anchor="end">55.0</text>
+                                    <text x="100" y="141" class="gauge-display-unit" text-anchor="start">%</text>
+                                </g>
+                            </svg>
+                            <span class="sim-mini-status good" id="simHumidStatus">Optimal (55%)</span>
+                        </div>
+
                     </div>
 
+                    <!-- Global Safety Status Badge -->
                     <div class="sim-badge" id="simStatusBadge">
                         <i class="fas fa-circle-check"></i>
-                        <span>NORMAL SAFE PARAMETERS</span>
+                        <span>ALL SENSORS NORMAL &bull; SAFE PARAMETERS</span>
                     </div>
                 </div>
             </div>
@@ -521,7 +608,10 @@
     <script src="js/firebase-config.js"></script>
     <script src="js/auth.js"></script>
 
-    <!-- Sandbox Simulation Script -->
+    <!-- Interactive PCB Circuit Wire Paths Canvas Controller -->
+    <script src="js/pcb-canvas.js"></script>
+
+    <!-- Sandbox 3-Gauge Live Telemetry Simulation Script -->
     <script>
         const ARC_LEN = 235.62;
 
@@ -530,40 +620,152 @@
             const temp = Number(document.getElementById('simTempSlider').value);
             const humid = Number(document.getElementById('simHumidSlider').value);
 
-            document.getElementById('simGasLabel').textContent = gas + ' PPM';
-            document.getElementById('simTempLabel').textContent = temp.toFixed(1) + ' °C';
-            document.getElementById('simHumidLabel').textContent = humid.toFixed(1) + ' %';
+            // Update slider readout values
+            const gasLabel = document.getElementById('simGasLabel');
+            const tempLabel = document.getElementById('simTempLabel');
+            const humidLabel = document.getElementById('simHumidLabel');
+            if (gasLabel) gasLabel.textContent = gas + ' PPM';
+            if (tempLabel) tempLabel.textContent = temp.toFixed(1) + ' °C';
+            if (humidLabel) humidLabel.textContent = humid.toFixed(1) + ' %';
 
-            // Check emergency thresholds
+            // 1. Gas Gauge Update (Range 0 - 4095 PPM)
+            const gasPercent = Math.min(1, Math.max(0, gas / 4095));
+            const gasAngle = -90 + (gasPercent * 180);
+            const gasNeedle = document.getElementById('simGasNeedle');
+            const gasFill = document.getElementById('simGasFill');
+            const gasVal = document.getElementById('simGasVal');
+            const gasStatus = document.getElementById('simGasStatus');
+            const gasCard = document.getElementById('simGasCard');
+
+            if (gasNeedle) gasNeedle.style.transform = `rotate(${gasAngle.toFixed(1)}deg)`;
+            if (gasFill) {
+                gasFill.style.strokeDashoffset = (ARC_LEN * (1 - gasPercent)).toFixed(1);
+                gasFill.style.stroke = gas >= 1600 ? '#ff1744' : (gasPercent > 0.4 ? '#f59e0b' : '#10b981');
+            }
+            if (gasVal) gasVal.textContent = Math.round(gas);
+            if (gasStatus) {
+                if (gas < 600) {
+                    gasStatus.textContent = 'Safe (Clean)';
+                    gasStatus.className = 'sim-mini-status good';
+                } else if (gas < 1200) {
+                    gasStatus.textContent = 'Moderate VOCs';
+                    gasStatus.className = 'sim-mini-status moderate';
+                } else if (gas < 1600) {
+                    gasStatus.textContent = 'Elevated Smoke';
+                    gasStatus.className = 'sim-mini-status moderate';
+                } else {
+                    gasStatus.textContent = 'Hazardous Air!';
+                    gasStatus.className = 'sim-mini-status danger';
+                }
+            }
+            if (gasCard) {
+                if (gas >= 1600) gasCard.classList.add('hazard-active');
+                else gasCard.classList.remove('hazard-active');
+            }
+
+            // 2. Temperature Gauge Update (Range 0 - 50 °C)
+            const tempPercent = Math.min(1, Math.max(0, temp / 50));
+            const tempAngle = -90 + (tempPercent * 180);
+            const tempNeedle = document.getElementById('simTempNeedle');
+            const tempFill = document.getElementById('simTempFill');
+            const tempVal = document.getElementById('simTempVal');
+            const tempStatus = document.getElementById('simTempStatus');
+            const tempCard = document.getElementById('simTempCard');
+
+            if (tempNeedle) tempNeedle.style.transform = `rotate(${tempAngle.toFixed(1)}deg)`;
+            if (tempFill) {
+                tempFill.style.strokeDashoffset = (ARC_LEN * (1 - tempPercent)).toFixed(1);
+                tempFill.style.stroke = temp >= 40.0 ? '#ff1744' : (temp >= 32.0 ? '#f97316' : (temp < 18 ? '#38bdf8' : '#10b981'));
+            }
+            if (tempVal) tempVal.textContent = temp.toFixed(1);
+            if (tempStatus) {
+                if (temp < 18.0) {
+                    tempStatus.textContent = 'Cool Ambient';
+                    tempStatus.className = 'sim-mini-status moderate';
+                } else if (temp <= 30.0) {
+                    tempStatus.textContent = 'Optimal Temp';
+                    tempStatus.className = 'sim-mini-status good';
+                } else if (temp < 40.0) {
+                    tempStatus.textContent = 'Elevated Heat';
+                    tempStatus.className = 'sim-mini-status moderate';
+                } else {
+                    tempStatus.textContent = 'Thermal Overheat!';
+                    tempStatus.className = 'sim-mini-status danger';
+                }
+            }
+            if (tempCard) {
+                if (temp >= 40.0) tempCard.classList.add('hazard-active');
+                else tempCard.classList.remove('hazard-active');
+            }
+
+            // 3. Humidity Gauge Update (Range 0 - 100 %)
+            const humidPercent = Math.min(1, Math.max(0, humid / 100));
+            const humidAngle = -90 + (humidPercent * 180);
+            const humidNeedle = document.getElementById('simHumidNeedle');
+            const humidFill = document.getElementById('simHumidFill');
+            const humidVal = document.getElementById('simHumidVal');
+            const humidStatus = document.getElementById('simHumidStatus');
+            const humidCard = document.getElementById('simHumidCard');
+
+            if (humidNeedle) humidNeedle.style.transform = `rotate(${humidAngle.toFixed(1)}deg)`;
+            if (humidFill) {
+                humidFill.style.strokeDashoffset = (ARC_LEN * (1 - humidPercent)).toFixed(1);
+                humidFill.style.stroke = humid >= 88.0 ? '#ff1744' : (humid >= 70.0 ? '#3b82f6' : (humid < 35.0 ? '#f59e0b' : '#06b6d4'));
+            }
+            if (humidVal) humidVal.textContent = humid.toFixed(1);
+            if (humidStatus) {
+                if (humid < 35.0) {
+                    humidStatus.textContent = 'Low Moisture';
+                    humidStatus.className = 'sim-mini-status moderate';
+                } else if (humid <= 70.0) {
+                    humidStatus.textContent = 'Optimal Moisture';
+                    humidStatus.className = 'sim-mini-status good';
+                } else if (humid < 88.0) {
+                    humidStatus.textContent = 'High Moisture';
+                    humidStatus.className = 'sim-mini-status moderate';
+                } else {
+                    humidStatus.textContent = 'Condensation Danger!';
+                    humidStatus.className = 'sim-mini-status danger';
+                }
+            }
+            if (humidCard) {
+                if (humid >= 88.0) humidCard.classList.add('hazard-active');
+                else humidCard.classList.remove('hazard-active');
+            }
+
+            // Check overall emergency status
             const isHazard = gas >= 1600 || temp >= 40.0 || humid >= 88.0;
-
-            const card = document.getElementById('sandboxCard');
-            const needle = document.getElementById('simNeedle');
-            const fill = document.getElementById('simFill');
-            const val = document.getElementById('simValue');
+            const sandboxCard = document.getElementById('sandboxCard');
             const badge = document.getElementById('simStatusBadge');
 
-            // Normalized to gas representation for main gauge preview
-            const percent = Math.min(1, Math.max(0, gas / 4095));
-            const angle = -90 + (percent * 180);
-
-            needle.style.transform = `rotate(${angle.toFixed(1)}deg)`;
-            fill.style.strokeDashoffset = (ARC_LEN * (1 - percent)).toFixed(1);
-            val.textContent = Math.round(gas);
-
             if (isHazard) {
-                card.classList.add('sim-emergency');
-                fill.style.stroke = '#ff1744';
-                needle.style.stroke = '#ff1744';
-                badge.className = 'sim-badge danger';
-                badge.innerHTML = `<i class="fas fa-triangle-exclamation"></i> <span>EMERGENCY HAZARD DETECTED! (Gas: ${gas} PPM, Temp: ${temp}°C)</span>`;
+                document.body.classList.add('emergency-mode');
+                if (sandboxCard) sandboxCard.classList.add('sim-emergency');
+                
+                const hazardReasons = [];
+                if (gas >= 1600) hazardReasons.push(`Gas: ${gas} PPM`);
+                if (temp >= 40.0) hazardReasons.push(`Temp: ${temp.toFixed(1)}°C`);
+                if (humid >= 88.0) hazardReasons.push(`Humidity: ${humid.toFixed(1)}%`);
+
+                if (badge) {
+                    badge.className = 'sim-badge danger';
+                    badge.innerHTML = `<i class="fas fa-triangle-exclamation"></i> <span>EMERGENCY HAZARD TRIGGERED: ${hazardReasons.join(' &bull; ')}</span>`;
+                }
             } else {
-                card.classList.remove('sim-emergency');
-                fill.style.stroke = percent > 0.4 ? '#f59e0b' : '#10b981';
-                needle.style.stroke = '#f8fafc';
-                badge.className = 'sim-badge';
-                badge.innerHTML = `<i class="fas fa-circle-check"></i> <span>NORMAL SAFE PARAMETERS</span>`;
+                document.body.classList.remove('emergency-mode');
+                if (sandboxCard) sandboxCard.classList.remove('sim-emergency');
+                if (badge) {
+                    badge.className = 'sim-badge';
+                    badge.innerHTML = `<i class="fas fa-circle-check"></i> <span>ALL SENSORS NORMAL &bull; SAFE PARAMETERS</span>`;
+                }
             }
+        }
+
+        // Initialize simulation on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', runSandboxSimulation);
+        } else {
+            runSandboxSimulation();
         }
     </script>
 </body>

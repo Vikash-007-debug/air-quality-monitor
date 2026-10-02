@@ -1,8 +1,9 @@
 /**
  * ==========================================================================
- * AEROMONITOR - PCB CIRCUIT WIRE ANIMATION ENGINE
- * Renders an authentic matte circuit board with silver wire traces & live
- * electrical telemetry pulses. Supports dynamic Emergency Blood Red mode.
+ * AEROMONITOR - INTERACTIVE PCB CIRCUIT TRACE ENGINE
+ * Clean, static silver wire paths that interactively illuminate and highlight
+ * under the cursor. ZERO moving current / pulses.
+ * Supports dynamic Emergency Blood Red mode.
  * ==========================================================================
  */
 
@@ -10,9 +11,9 @@
     let canvas, ctx;
     let width, height;
     let traces = [];
-    let pulses = [];
-    let animationFrameId = null;
-    let mouse = { x: -1000, y: -1000, radius: 120 };
+    let mouse = { x: -1000, y: -1000, radius: 150 };
+    let isMouseActive = false;
+    let needsRedraw = true;
 
     function init() {
         canvas = document.getElementById('pcbCircuitCanvas');
@@ -26,17 +27,48 @@
         ctx = canvas.getContext('2d');
         resize();
         window.addEventListener('resize', debounceResize);
+
         window.addEventListener('mousemove', (e) => {
             mouse.x = e.clientX;
             mouse.y = e.clientY;
+            isMouseActive = true;
+            needsRedraw = true;
         });
+
         window.addEventListener('mouseleave', () => {
             mouse.x = -1000;
             mouse.y = -1000;
+            isMouseActive = false;
+            needsRedraw = true;
         });
 
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches && e.touches.length > 0) {
+                mouse.x = e.touches[0].clientX;
+                mouse.y = e.touches[0].clientY;
+                isMouseActive = true;
+                needsRedraw = true;
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches && e.touches.length > 0) {
+                mouse.x = e.touches[0].clientX;
+                mouse.y = e.touches[0].clientY;
+                isMouseActive = true;
+                needsRedraw = true;
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => {
+            mouse.x = -1000;
+            mouse.y = -1000;
+            isMouseActive = false;
+            needsRedraw = true;
+        }, { passive: true });
+
         generateCircuitLayout();
-        animate();
+        render();
     }
 
     let resizeTimer;
@@ -45,6 +77,7 @@
         resizeTimer = setTimeout(() => {
             resize();
             generateCircuitLayout();
+            needsRedraw = true;
         }, 150);
     }
 
@@ -55,28 +88,25 @@
 
     function generateCircuitLayout() {
         traces = [];
-        pulses = [];
 
-        const gridSize = 80;
+        const gridSize = 70;
         const cols = Math.ceil(width / gridSize) + 1;
         const rows = Math.ceil(height / gridSize) + 1;
-
-        // Generate PCB nodes and angled traces
-        const numTraces = Math.min(48, Math.floor((cols * rows) / 4));
+        const numTraces = Math.min(55, Math.floor((cols * rows) / 3.5));
 
         for (let i = 0; i < numTraces; i++) {
             const startCol = Math.floor(Math.random() * cols);
             const startRow = Math.floor(Math.random() * rows);
 
-            let curX = startCol * gridSize + (Math.random() > 0.5 ? 20 : 40);
-            let curY = startRow * gridSize + (Math.random() > 0.5 ? 20 : 40);
+            let curX = startCol * gridSize + (Math.random() > 0.5 ? 15 : 35);
+            let curY = startRow * gridSize + (Math.random() > 0.5 ? 15 : 35);
 
             const points = [{ x: curX, y: curY }];
             const segments = Math.floor(Math.random() * 4) + 2;
 
             for (let s = 0; s < segments; s++) {
                 const dir = Math.floor(Math.random() * 4);
-                const len = (Math.floor(Math.random() * 3) + 1) * gridSize;
+                const len = (Math.floor(Math.random() * 2) + 1) * gridSize;
 
                 if (dir === 0) { // Horizontal
                     curX += Math.random() > 0.5 ? len : -len;
@@ -86,184 +116,168 @@
                     const dLen = len * 0.707;
                     curX += Math.random() > 0.5 ? dLen : -dLen;
                     curY += Math.random() > 0.5 ? dLen : -dLen;
-                } else { // 45-deg bend then straight
-                    const bendLen = 25;
-                    const dX = Math.random() > 0.5 ? bendLen : -bendLen;
-                    const dY = Math.random() > 0.5 ? bendLen : -bendLen;
-                    curX += dX;
-                    curY += dY;
+                } else { // 45-deg bend
+                    const bend = 20;
+                    curX += Math.random() > 0.5 ? bend : -bend;
+                    curY += Math.random() > 0.5 ? bend : -bend;
                     points.push({ x: curX, y: curY });
-                    curX += dX > 0 ? len : -len;
+                    curX += Math.random() > 0.5 ? len : -len;
                 }
 
-                // Clamp to screen bounds + padding
-                curX = Math.max(-40, Math.min(width + 40, curX));
-                curY = Math.max(-40, Math.min(height + 40, curY));
-
+                curX = Math.max(-30, Math.min(width + 30, curX));
+                curY = Math.max(-30, Math.min(height + 30, curY));
                 points.push({ x: curX, y: curY });
             }
 
             traces.push({
                 points: points,
-                hasViaStart: Math.random() > 0.3,
-                hasViaEnd: Math.random() > 0.3,
-                hasPad: Math.random() > 0.6
+                hasViaStart: Math.random() > 0.35,
+                hasViaEnd: Math.random() > 0.35,
+                hasPad: Math.random() > 0.55
             });
-
-            // Add electric signal pulse
-            if (Math.random() > 0.25) {
-                pulses.push({
-                    traceIndex: i,
-                    progress: Math.random(),
-                    speed: 0.003 + Math.random() * 0.005,
-                    length: 0.08 + Math.random() * 0.12
-                });
-            }
         }
     }
 
-    function getInterpolatedPoint(points, t) {
-        if (points.length < 2) return points[0] || { x: 0, y: 0 };
+    function distanceToSegment(px, py, x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
 
-        // Calculate total length
-        let totalLen = 0;
-        const segmentLengths = [];
-        for (let i = 0; i < points.length - 1; i++) {
-            const dx = points[i + 1].x - points[i].x;
-            const dy = points[i + 1].y - points[i].y;
-            const len = Math.sqrt(dx * dx + dy * dy);
-            segmentLengths.push(len);
-            totalLen += len;
-        }
-
-        if (totalLen === 0) return points[0];
-
-        let targetDist = t * totalLen;
-        let accum = 0;
-
-        for (let i = 0; i < segmentLengths.length; i++) {
-            const len = segmentLengths[i];
-            if (accum + len >= targetDist) {
-                const segT = (targetDist - accum) / len;
-                return {
-                    x: points[i].x + (points[i + 1].x - points[i].x) * segT,
-                    y: points[i].y + (points[i + 1].y - points[i].y) * segT
-                };
-            }
-            accum += len;
-        }
-
-        return points[points.length - 1];
+        let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+        const nearX = x1 + t * dx;
+        const nearY = y1 + t * dy;
+        return Math.sqrt((px - nearX) * (px - nearX) + (py - nearY) * (py - nearY));
     }
 
-    function animate() {
+    let lastEmergencyState = false;
+
+    function render() {
         const isEmergency = document.body.classList.contains('emergency-mode');
+        if (isEmergency !== lastEmergencyState) {
+            lastEmergencyState = isEmergency;
+            needsRedraw = true;
+        }
 
+        if (needsRedraw) {
+            drawScene(isEmergency);
+            needsRedraw = false;
+        }
+        requestAnimationFrame(render);
+    }
+
+    window.refreshPcbCanvas = function() {
+        needsRedraw = true;
+    };
+
+    function drawScene(isEmergency) {
+        if (typeof isEmergency === 'undefined') {
+            isEmergency = document.body.classList.contains('emergency-mode');
+        }
         ctx.clearRect(0, 0, width, height);
 
-        // Trace styles
-        const traceColor = isEmergency ? 'rgba(255, 23, 68, 0.12)' : 'rgba(226, 232, 240, 0.07)';
-        const viaColor = isEmergency ? 'rgba(255, 23, 68, 0.45)' : 'rgba(226, 232, 240, 0.25)';
-        const pulseColor = isEmergency ? '#ff1744' : '#38bdf8';
-        const pulseGlow = isEmergency ? 'rgba(255, 23, 68, 0.85)' : 'rgba(56, 189, 248, 0.65)';
+        const baseTraceColor = isEmergency ? 'rgba(255, 23, 68, 0.12)' : 'rgba(226, 232, 240, 0.08)';
+        const baseViaColor = isEmergency ? 'rgba(255, 23, 68, 0.30)' : 'rgba(226, 232, 240, 0.20)';
 
-        // 1. Draw static traces & via pads
         traces.forEach(trace => {
             const pts = trace.points;
             if (pts.length < 2) return;
 
-            // Check distance to mouse for interactive highlight
-            let isHovered = false;
-            for (let p of pts) {
-                const dx = p.x - mouse.x;
-                const dy = p.y - mouse.y;
-                if (dx * dx + dy * dy < mouse.radius * mouse.radius) {
-                    isHovered = true;
-                    break;
-                }
+            // Find closest distance from cursor to any segment of this trace
+            let minDistance = 9999;
+            for (let i = 0; i < pts.length - 1; i++) {
+                const dist = distanceToSegment(mouse.x, mouse.y, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y);
+                if (dist < minDistance) minDistance = dist;
             }
 
+            let highlightFactor = 0;
+            if (minDistance < mouse.radius) {
+                highlightFactor = 1 - (minDistance / mouse.radius);
+                highlightFactor = Math.pow(highlightFactor, 1.8); // Smooth falloff curve
+            }
+
+            // Draw Wire Path
             ctx.beginPath();
             ctx.moveTo(pts[0].x, pts[0].y);
             for (let i = 1; i < pts.length; i++) {
                 ctx.lineTo(pts[i].x, pts[i].y);
             }
 
-            ctx.strokeStyle = isHovered 
-                ? (isEmergency ? 'rgba(255, 23, 68, 0.45)' : 'rgba(255, 255, 255, 0.28)')
-                : traceColor;
-            ctx.lineWidth = isHovered ? 1.6 : 1.1;
+            if (highlightFactor > 0.02) {
+                if (isEmergency) {
+                    ctx.strokeStyle = `rgba(255, 23, 68, ${0.15 + highlightFactor * 0.7})`;
+                    ctx.lineWidth = 1.1 + highlightFactor * 1.5;
+                    ctx.shadowBlur = 12 * highlightFactor;
+                    ctx.shadowColor = 'rgba(255, 23, 68, 0.85)';
+                } else {
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${0.12 + highlightFactor * 0.55})`;
+                    ctx.lineWidth = 1.1 + highlightFactor * 1.4;
+                    ctx.shadowBlur = 10 * highlightFactor;
+                    ctx.shadowColor = 'rgba(255, 255, 255, 0.65)';
+                }
+            } else {
+                ctx.strokeStyle = baseTraceColor;
+                ctx.lineWidth = 1.0;
+                ctx.shadowBlur = 0;
+            }
+
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.stroke();
+            ctx.shadowBlur = 0; // Reset shadow
 
-            // Draw Via contact pads
-            if (trace.hasViaStart) drawVia(pts[0].x, pts[0].y, viaColor, isHovered);
-            if (trace.hasViaEnd) drawVia(pts[pts.length - 1].x, pts[pts.length - 1].y, viaColor, isHovered);
+            // Draw Contact Via Pads
+            if (trace.hasViaStart) drawVia(pts[0].x, pts[0].y, baseViaColor, highlightFactor, isEmergency);
+            if (trace.hasViaEnd) drawVia(pts[pts.length - 1].x, pts[pts.length - 1].y, baseViaColor, highlightFactor, isEmergency);
 
             // Draw SMT Test Pads
             if (trace.hasPad && pts.length > 2) {
                 const mid = pts[1];
-                ctx.fillStyle = viaColor;
-                ctx.fillRect(mid.x - 3, mid.y - 2, 6, 4);
+                ctx.fillStyle = highlightFactor > 0.1 
+                    ? (isEmergency ? 'rgba(255, 23, 68, 0.8)' : 'rgba(255, 255, 255, 0.7)') 
+                    : baseViaColor;
+                ctx.fillRect(mid.x - 3.5, mid.y - 2.5, 7, 5);
             }
         });
-
-        // 2. Draw live electrical telemetry signal pulses
-        pulses.forEach(pulse => {
-            const trace = traces[pulse.traceIndex];
-            if (!trace || trace.points.length < 2) return;
-
-            pulse.progress += pulse.speed;
-            if (pulse.progress > 1.0) {
-                pulse.progress = 0;
-            }
-
-            const head = getInterpolatedPoint(trace.points, pulse.progress);
-            const tailProgress = Math.max(0, pulse.progress - pulse.length);
-            const tail = getInterpolatedPoint(trace.points, tailProgress);
-
-            const grad = ctx.createLinearGradient(tail.x, tail.y, head.x, head.y);
-            grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-            grad.addColorStop(1, pulseColor);
-
-            ctx.beginPath();
-            ctx.moveTo(tail.x, tail.y);
-            ctx.lineTo(head.x, head.y);
-            ctx.strokeStyle = grad;
-            ctx.lineWidth = 2.2;
-            ctx.stroke();
-
-            // Glowing head particle
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = pulseGlow;
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(head.x, head.y, 2.2, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.shadowBlur = 0; // Reset shadow
-        });
-
-        animationFrameId = requestAnimationFrame(animate);
     }
 
-    function drawVia(x, y, strokeColor, isHovered) {
-        ctx.beginPath();
-        ctx.arc(x, y, isHovered ? 4.2 : 3.4, 0, Math.PI * 2);
-        ctx.fillStyle = '#08080c';
-        ctx.fill();
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 1.3;
-        ctx.stroke();
+    function drawVia(x, y, baseColor, highlightFactor, isEmergency) {
+        const dx = x - mouse.x;
+        const dy = y - mouse.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        let viaHighlight = 0;
+        if (dist < mouse.radius) {
+            viaHighlight = Math.pow(1 - (dist / mouse.radius), 1.5);
+        }
 
-        // Inner copper via hole
+        const isHighlighted = viaHighlight > 0.05 || highlightFactor > 0.1;
+        const outerR = isHighlighted ? 4.2 : 3.4;
+
+        ctx.beginPath();
+        ctx.arc(x, y, outerR, 0, Math.PI * 2);
+        ctx.fillStyle = '#07070a';
+        ctx.fill();
+
+        ctx.lineWidth = isHighlighted ? 1.6 : 1.2;
+        if (isHighlighted) {
+            ctx.strokeStyle = isEmergency ? '#ff1744' : '#ffffff';
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = isEmergency ? 'rgba(255, 23, 68, 0.9)' : 'rgba(255, 255, 255, 0.8)';
+        } else {
+            ctx.strokeStyle = baseColor;
+            ctx.shadowBlur = 0;
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Inner copper hole
         ctx.beginPath();
         ctx.arc(x, y, 1.2, 0, Math.PI * 2);
-        ctx.fillStyle = isHovered ? '#ffffff' : 'rgba(226, 232, 240, 0.45)';
+        ctx.fillStyle = isHighlighted ? (isEmergency ? '#ff8095' : '#ffffff') : 'rgba(226, 232, 240, 0.4)';
         ctx.fill();
     }
 
-    // Launch when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
