@@ -67,24 +67,55 @@ body {
 }
 
 /* ==========================================================================
-   NORMAL THEME: OBSIDIAN BLACK & METALLIC SILVER
+   MATTE OBSIDIAN PCB BACKGROUND WITH SILVER CIRCUIT WIRE PATHS
    ========================================================================== */
-body.theme-silver {
-    background: radial-gradient(circle at 50% -10%, #1a1a26 0%, #0d0d14 45%, #07070a 100%);
+:root {
+    --pcb-trace-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cpath d='M 0 45 L 55 45 L 80 70 L 155 70 L 180 45 L 260 45' fill='none' stroke='rgba(226,232,240,0.11)' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M 45 0 L 45 35 L 25 55 L 25 180 L 45 200 L 45 260' fill='none' stroke='rgba(226,232,240,0.08)' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M 195 0 L 195 90 L 160 125 L 90 125 L 60 155 L 60 260' fill='none' stroke='rgba(226,232,240,0.11)' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M 0 195 L 80 195 L 105 170 L 175 170 L 205 200 L 260 200' fill='none' stroke='rgba(226,232,240,0.09)' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M 155 70 L 155 105 L 140 120' fill='none' stroke='rgba(226,232,240,0.07)' stroke-width='1.2'/%3E%3Cpath d='M 90 125 L 90 95 L 105 80 L 120 80' fill='none' stroke='rgba(226,232,240,0.07)' stroke-width='1.2'/%3E%3Cpath d='M 195 90 L 225 90 L 240 105 L 240 155 L 225 170' fill='none' stroke='rgba(226,232,240,0.07)' stroke-width='1.2'/%3E%3Ccircle cx='80' cy='70' r='3.8' fill='%2308080c' stroke='rgba(226,232,240,0.35)' stroke-width='1.4'/%3E%3Ccircle cx='80' cy='70' r='1.2' fill='rgba(226,232,240,0.6)'/%3E%3Ccircle cx='180' cy='45' r='3.8' fill='%2308080c' stroke='rgba(226,232,240,0.35)' stroke-width='1.4'/%3E%3Ccircle cx='180' cy='45' r='1.2' fill='rgba(226,232,240,0.6)'/%3E%3Ccircle cx='25' cy='55' r='3.2' fill='%2308080c' stroke='rgba(226,232,240,0.25)' stroke-width='1.2'/%3E%3Ccircle cx='25' cy='180' r='3.2' fill='%2308080c' stroke='rgba(226,232,240,0.25)' stroke-width='1.2'/%3E%3Ccircle cx='160' cy='125' r='3.8' fill='%2308080c' stroke='rgba(226,232,240,0.35)' stroke-width='1.4'/%3E%3Ccircle cx='160' cy='125' r='1.2' fill='rgba(226,232,240,0.6)'/%3E%3Ccircle cx='105' cy='170' r='3.2' fill='%2308080c' stroke='rgba(226,232,240,0.25)' stroke-width='1.2'/%3E%3Ccircle cx='205' cy='200' r='3.8' fill='%2308080c' stroke='rgba(226,232,240,0.35)' stroke-width='1.4'/%3E%3Ccircle cx='205' cy='200' r='1.2' fill='rgba(226,232,240,0.6)'/%3E%3Crect x='118' y='25' width='9' height='4.5' rx='1' fill='rgba(226,232,240,0.18)' stroke='rgba(226,232,240,0.32)' stroke-width='0.8'/%3E%3Crect x='118' y='33' width='9' height='4.5' rx='1' fill='rgba(226,232,240,0.18)' stroke='rgba(226,232,240,0.32)' stroke-width='0.8'/%3E%3Crect x='210' y='120' width='4.5' height='8' rx='1' fill='rgba(226,232,240,0.16)' stroke='rgba(226,232,240,0.28)' stroke-width='0.8'/%3E%3Crect x='218' y='120' width='4.5' height='8' rx='1' fill='rgba(226,232,240,0.16)' stroke='rgba(226,232,240,0.28)' stroke-width='0.8'/%3E%3C/svg%3E");
+
+    --pcb-trace-emergency-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cpath d='M 0 45 L 55 45 L 80 70 L 155 70 L 180 45 L 260 45' fill='none' stroke='rgba(255,23,68,0.15)' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M 45 0 L 45 35 L 25 55 L 25 180 L 45 200 L 45 260' fill='none' stroke='rgba(255,23,68,0.12)' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M 195 0 L 195 90 L 160 125 L 90 125 L 60 155 L 60 260' fill='none' stroke='rgba(255,23,68,0.15)' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M 0 195 L 80 195 L 105 170 L 175 170 L 205 200 L 260 200' fill='none' stroke='rgba(255,23,68,0.13)' stroke-width='1.2' stroke-linecap='round'/%3E%3Ccircle cx='80' cy='70' r='3.8' fill='%23170205' stroke='rgba(255,23,68,0.5)' stroke-width='1.4'/%3E%3Ccircle cx='80' cy='70' r='1.2' fill='%23ff1744'/%3E%3Ccircle cx='180' cy='45' r='3.8' fill='%23170205' stroke='rgba(255,23,68,0.5)' stroke-width='1.4'/%3E%3Ccircle cx='180' cy='45' r='1.2' fill='%23ff1744'/%3E%3Ccircle cx='160' cy='125' r='3.8' fill='%23170205' stroke='rgba(255,23,68,0.5)' stroke-width='1.4'/%3E%3Ccircle cx='160' cy='125' r='1.2' fill='%23ff1744'/%3E%3C/svg%3E");
 }
 
-/* ==========================================================================
-   EMERGENCY THEME: OBSIDIAN BLACK & CRIMSON BLOOD RED
-   ========================================================================== */
+/* Fullscreen Animated Circuit Canvas */
+.pcb-circuit-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.85;
+}
+
+/* Normal Matte Theme with Silver Circuit Wire Paths */
+body.theme-silver,
+body.home-page,
+body.login-page {
+    background-color: #07070a;
+    background-image: 
+        radial-gradient(circle at 50% 0%, rgba(26, 26, 38, 0.7) 0%, rgba(13, 13, 18, 0.95) 55%, #060608 100%),
+        var(--pcb-trace-svg);
+    background-repeat: no-repeat, repeat;
+    background-size: 100% 1200px, 260px 260px;
+    background-attachment: scroll, fixed;
+}
+
+/* Emergency Blood Red Matte PCB Theme */
 body.emergency-mode {
-    background: radial-gradient(circle at 50% -10%, #2f040a 0%, #140205 50%, #060102 100%) !important;
-    box-shadow: inset 0 0 140px rgba(255, 23, 68, 0.4) !important;
+    background-color: #0a0102 !important;
+    background-image: 
+        radial-gradient(circle at 50% -10%, #35040b 0%, #150205 50%, #060102 100%),
+        var(--pcb-trace-emergency-svg) !important;
+    background-repeat: no-repeat, repeat !important;
+    background-size: 100% 1200px, 260px 260px !important;
+    background-attachment: scroll, fixed !important;
+    box-shadow: inset 0 0 140px rgba(255, 23, 68, 0.45) !important;
     animation: screenStrobeVignette 2s ease-in-out infinite alternate;
 }
 
 @keyframes screenStrobeVignette {
-    0% { box-shadow: inset 0 0 100px rgba(255, 23, 68, 0.3); }
-    100% { box-shadow: inset 0 0 160px rgba(255, 23, 68, 0.6); }
+    0% { box-shadow: inset 0 0 100px rgba(255, 23, 68, 0.35); }
+    100% { box-shadow: inset 0 0 170px rgba(255, 23, 68, 0.65); }
 }
 
 body.emergency-mode .navbar {
@@ -863,6 +894,23 @@ body.emergency-mode .banner-icon-box {
 .email-icon { color: var(--accent-cyan) !important; }
 .clock-icon { color: #94a3b8 !important; }
 .chip-icon { color: #cbd5e1 !important; }
+
+.emergency-dispatch-icon {
+    color: #fbbf24 !important;
+    background: rgba(245, 158, 11, 0.12) !important;
+    border: 1px solid rgba(245, 158, 11, 0.35) !important;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+    transition: all 0.3s ease;
+}
+
+body.emergency-mode .emergency-dispatch-icon,
+.emergency-dispatch-icon.active-alert {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #b91c1c, #ff1744) !important;
+    border-color: #ff8095 !important;
+    box-shadow: 0 0 24px var(--emergency-glow) !important;
+    animation: sirenStrobe 0.8s infinite alternate !important;
+}
 
 .info-details {
     flex: 1;
@@ -1710,6 +1758,656 @@ body.emergency-mode .banner-icon-box {
     }
 
     .nav-tab span {
-        font-size: 10px;
+        display: none;
+    }
+}
+
+/* ==========================================================================
+   HOME PAGE - MATTE FINISHED STYLES & SENSOR SUITE SHOWCASE
+   ========================================================================== */
+
+/* ---------- Navbar Home Variant ---------- */
+.home-nav {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: rgba(10, 10, 15, 0.88);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border-silver);
+    padding: 16px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+}
+
+.home-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.home-nav-link {
+    color: var(--text-silver);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: color 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.home-nav-link:hover {
+    color: #ffffff;
+}
+
+.home-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-matte-silver {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(203, 213, 225, 0.06) 100%);
+    border: 1px solid var(--border-silver-bright);
+    color: #ffffff;
+    padding: 8px 18px;
+    border-radius: 22px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.btn-matte-silver:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(203, 213, 225, 0.12) 100%);
+    border-color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 255, 255, 0.15);
+}
+
+.btn-matte-primary {
+    background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+    color: #09090c;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 22px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.25);
+}
+
+.btn-matte-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(255, 255, 255, 0.4);
+}
+
+/* ---------- Hero Section ---------- */
+.home-hero {
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 60px 24px 80px 24px;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 48px;
+    align-items: center;
+}
+
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-silver);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-silver);
+    letter-spacing: 0.5px;
+    margin-bottom: 20px;
+}
+
+.hero-badge .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #38bdf8;
+    box-shadow: 0 0 8px #38bdf8;
+    animation: dotPulse 2s infinite ease-in-out;
+}
+
+.hero-title {
+    font-size: 46px;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 20px;
+    letter-spacing: -1px;
+    color: #ffffff;
+}
+
+.hero-title .text-silver-gradient {
+    background: linear-gradient(135deg, #ffffff 30%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-description {
+    font-size: 15px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    margin-bottom: 32px;
+    max-width: 560px;
+}
+
+.hero-cta-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 36px;
+}
+
+.hero-cta-group .btn-matte-primary {
+    padding: 12px 26px;
+    font-size: 14px;
+}
+
+.hero-cta-group .btn-matte-silver {
+    padding: 12px 24px;
+    font-size: 14px;
+}
+
+.hero-metrics-strip {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 24px;
+}
+
+.hero-metric-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.hero-metric-val {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.hero-metric-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ---------- Hero Interactive Instrument Panel ---------- */
+.hero-instrument-box {
+    position: relative;
+    background: linear-gradient(145deg, rgba(20, 20, 30, 0.9) 0%, rgba(11, 11, 17, 0.95) 100%);
+    border: 1px solid var(--border-silver);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(16px);
+}
+
+.instrument-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 14px;
+}
+
+.instrument-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.instrument-live-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    color: var(--accent-emerald);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.instrument-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.instrument-card-mini {
+    background: rgba(14, 14, 22, 0.8);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.instrument-card-mini .label {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.instrument-card-mini .val {
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.instrument-card-mini .val small {
+    font-size: 12px;
+    color: var(--text-silver);
+}
+
+.instrument-card-mini .status-tag {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent-emerald);
+}
+
+.instrument-footer-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* ---------- Section Layouts ---------- */
+.home-section {
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 70px 24px;
+}
+
+.section-head-center {
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto 50px auto;
+}
+
+.section-head-center .section-badge {
+    margin-bottom: 12px;
+}
+
+.section-head-center h2 {
+    font-size: 32px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+}
+
+.section-head-center p {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+/* ---------- Sensor Showcase Grid ---------- */
+.sensors-showcase-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+.sensor-box {
+    position: relative;
+    background: linear-gradient(145deg, rgba(19, 19, 28, 0.85) 0%, rgba(12, 12, 17, 0.95) 100%);
+    border: 1px solid var(--border-silver);
+    border-radius: var(--radius-lg);
+    padding: 30px 24px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-card);
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(14px);
+    overflow: hidden;
+}
+
+.sensor-box:hover {
+    transform: translateY(-6px);
+    border-color: var(--border-silver-bright);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.85), 0 0 30px rgba(255, 255, 255, 0.06);
+}
+
+.sensor-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 18px;
+}
+
+.sensor-icon-plate {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-silver);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: var(--text-silver);
+}
+
+.sensor-pin-chip {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-silver);
+}
+
+.sensor-box h3 {
+    font-size: 19px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 6px;
+}
+
+.sensor-box-subtitle {
+    font-size: 12px;
+    color: var(--accent-cyan);
+    font-weight: 600;
+    margin-bottom: 14px;
+}
+
+.sensor-box p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 20px;
+    flex: 1;
+}
+
+.sensor-specs-table {
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 14px;
+    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.spec-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+}
+
+.spec-key {
+    color: var(--text-dim);
+}
+
+.spec-val {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.sensor-trigger-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ---------- Architecture & Output Workflow ---------- */
+.architecture-timeline {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    position: relative;
+}
+
+.arch-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-silver);
+    border-radius: var(--radius-md);
+    padding: 24px 20px;
+    position: relative;
+    box-shadow: var(--shadow-card);
+    transition: all 0.3s ease;
+}
+
+.arch-card:hover {
+    border-color: var(--border-silver-bright);
+    transform: translateY(-4px);
+}
+
+.arch-step-num {
+    font-size: 28px;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.08);
+    margin-bottom: 12px;
+    line-height: 1;
+}
+
+.arch-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--text-silver);
+    margin-bottom: 16px;
+}
+
+.arch-card h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+
+.arch-card p {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+/* ---------- Interactive Live Sensor Sandbox ---------- */
+.simulator-box {
+    background: linear-gradient(145deg, #13131c 0%, #0c0c12 100%);
+    border: 1px solid var(--border-silver);
+    border-radius: var(--radius-lg);
+    padding: 36px 32px;
+    box-shadow: var(--shadow-card);
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 36px;
+    align-items: center;
+    transition: all 0.4s ease;
+}
+
+.simulator-box.sim-emergency {
+    border-color: var(--emergency-crimson) !important;
+    background: linear-gradient(145deg, #26050b 0%, #100204 100%) !important;
+    box-shadow: 0 0 50px rgba(255, 23, 68, 0.5), inset 0 0 30px rgba(255, 23, 68, 0.2) !important;
+}
+
+.sim-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.sim-control-group label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+
+.sim-slider {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #1e1e2d;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.sim-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+    transition: transform 0.15s ease;
+}
+
+.sim-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.sim-preview-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.sim-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    color: var(--accent-emerald);
+    margin-top: 16px;
+}
+
+.sim-badge.danger {
+    background: rgba(255, 23, 68, 0.2);
+    border-color: var(--emergency-crimson);
+    color: var(--emergency-crimson);
+    animation: alertStrobe 0.5s infinite alternate;
+}
+
+/* ---------- Dedicated Login Banner Card ---------- */
+.home-login-card {
+    background: linear-gradient(145deg, rgba(20, 20, 30, 0.95) 0%, rgba(12, 12, 18, 0.98) 100%);
+    border: 1px solid var(--border-silver);
+    border-radius: var(--radius-lg);
+    padding: 48px 32px;
+    text-align: center;
+    max-width: 580px;
+    margin: 0 auto;
+    box-shadow: var(--shadow-card);
+}
+
+.home-login-card h3 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 10px;
+}
+
+.home-login-card p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+    line-height: 1.6;
+}
+
+/* ---------- Matte PCB Footer ---------- */
+.home-footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border-subtle);
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12px;
+    background: rgba(8, 8, 12, 0.9);
+}
+
+.home-footer a {
+    color: var(--text-silver);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.home-footer a:hover {
+    color: #ffffff;
+}
+
+@media (max-width: 900px) {
+    .home-hero {
+        grid-template-columns: 1fr;
+        padding-top: 36px;
+    }
+
+    .simulator-box {
+        grid-template-columns: 1fr;
+    }
+
+    .home-nav-links {
+        display: none;
     }
 }
