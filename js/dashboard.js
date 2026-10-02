@@ -1,37 +1,40 @@
-// ============================================
-// Dashboard - Real-time Gauge Updates & Emergency System
-// Integrated with Web3Forms Direct Email Dispatch
-// ============================================
+// ==========================================================================
+// AEROMONITOR ENTERPRISE - DASHBOARD CONTROLLER & TELEMETRY ENGINE
+// Dual Theme: Obsidian Black & Metallic Silver (Normal)
+//             Blood Red & Crimson Strobe (Emergency Hazard)
+// ==========================================================================
 
-// Total SVG arc length for the semicircle gauges (r=80, 180 degrees)
-const ARC_LENGTH = 251.33;
+// Exact Arc Length for r=75 Semicircle: pi * 75 = 235.619
+const ARC_LENGTH = 235.62;
 
-// Sensor ranges
+// Sensor Operating Ranges
 const TEMP_MIN = 0, TEMP_MAX = 50;       // DHT11 range: 0-50°C
 const HUMID_MIN = 0, HUMID_MAX = 100;    // DHT11 range: 0-100%
-const GAS_MIN = 0, GAS_MAX = 4095;      // MQ-135 ADC range: 0-4095 (12-bit ESP32)
+const GAS_MIN = 0, GAS_MAX = 4095;      // MQ-135 12-Bit ADC range: 0-4095
 
-// ============================================
-// EMERGENCY THRESHOLDS
-// ============================================
+// ==========================================================================
+// REAL-TIME SAFETY & EMERGENCY THRESHOLDS
+// ==========================================================================
 const EMERGENCY_THRESHOLDS = {
-    gas: 1800,        // MQ-135 raw reading above 1800 is considered hazardous smoke/gas
-    tempHigh: 40.0,   // High temperature alert (°C)
-    humidHigh: 85.0   // Extreme humidity level (%)
+    gas: 1600,        // MQ-135 reading >= 1600 indicates toxic VOC, smoke, or LPG leak
+    tempHigh: 40.0,   // DHT11 reading >= 40.0°C indicates extreme heat or fire hazard
+    humidHigh: 88.0   // DHT11 reading >= 88.0% indicates critical condensation hazard
 };
 
-// Emergency System State
+// Emergency & Alert State Variables
 let isEmergencyActive = false;
 let isAudioMuted = false;
 let audioContext = null;
 let sirenInterval = null;
 let lastEmailSentTimestamp = 0;
-const EMAIL_COOLDOWN_MS = 60 * 1000; // 1-minute cooldown between emergency emails for testing
+const EMAIL_COOLDOWN_MS = 60 * 1000; // 60-second cooldown between auto-emails
 let isSimulationActive = false;
+let incidentLedger = [];
+let emergencyIncidentCount = 0;
 
-// ============================================
-// EMAILJS CONFIGURATION (Direct Gmail Delivery to Any Customer)
-// ============================================
+// ==========================================================================
+// EMAILJS CONFIGURATION (Direct Gmail Delivery to Customer)
+// ==========================================================================
 const EMAILJS_CONFIG = {
     serviceId: "service_cid42oc",
     templateId: "template_q4x7j0f",
@@ -39,8 +42,36 @@ const EMAILJS_CONFIG = {
 };
 
 if (window.emailjs) {
-    emailjs.init({ publicKey: EMAILJS_CONFIG.publicKey });
+    try {
+        emailjs.init({ publicKey: EMAILJS_CONFIG.publicKey });
+    } catch (e) {
+        console.warn("EmailJS init note:", e);
+    }
 }
+
+// ==========================================================================
+// TELEMETRY HISTORY & STATISTICAL BUFFER
+// ==========================================================================
+const MAX_LIVE_POINTS = 30;
+const MAX_HISTORY_POINTS = 500;
+
+const telemetryBuffer = {
+    timestamps: [],
+    gas: [],
+    temp: [],
+    humid: []
+};
+
+// Active historical filter range: '1h', '6h', '24h'
+let currentHistoryFilter = '1h';
+
+// Chart.js Instances
+let liveChartInstance = null;
+let historicalChartInstance = null;
+
+// ==========================================================================
+// SPEEDOMETER GAUGES CONTROLLER
+// ==========================================================================
 
 /**
  * Update a speedometer gauge with a new value
@@ -50,30 +81,29 @@ if (window.emailjs) {
  * @param {number} max    - Maximum of the gauge range
  */
 function updateGauge(id, value, min, max) {
-    // Clamp value within range
+    // Clamp value strictly within range
     value = Math.max(min, Math.min(max, value));
 
-    // Calculate percentage (0 to 1)
+    // Calculate percentage (0.0 to 1.0)
     const percent = (value - min) / (max - min);
 
-    // Update the filled arc (stroke-dashoffset)
+    // 1. Update filled arc (stroke-dashoffset)
     const fillEl = document.getElementById(id + 'Fill');
     if (fillEl) {
         const offset = ARC_LENGTH * (1 - percent);
         fillEl.style.strokeDashoffset = offset;
-
-        // Change color based on severity
         fillEl.style.stroke = getGaugeColor(id, percent);
     }
 
-    // Rotate the needle (-90deg = left, +90deg = right)
+    // 2. Rotate speedometer needle around pivot (100px, 105px)
+    // -90deg = 0% (horizontal left) | 0deg = 50% (vertical up) | +90deg = 100% (horizontal right)
     const needleEl = document.getElementById(id + 'Needle');
     if (needleEl) {
         const angle = -90 + (percent * 180);
-        needleEl.style.transform = `rotate(${angle}deg)`;
+        needleEl.style.transform = `rotate(${angle.toFixed(1)}deg)`;
     }
 
-    // Update the numeric display
+    // 3. Update mathematically centered digital display plate
     const valueEl = document.getElementById(id + 'Value');
     if (valueEl) {
         if (id === 'temp' || id === 'humid') {
@@ -83,38 +113,40 @@ function updateGauge(id, value, min, max) {
         }
     }
 
-    // Update status badge
+    // 4. Update status pill badge below gauge
     updateStatus(id, percent);
 }
 
 /**
- * Dynamic gauge color based on type and percentage
+ * Calculate dynamic gauge gradient color based on percentage
  */
 function getGaugeColor(id, percent) {
+    if (isEmergencyActive) {
+        return '#ff1744';
+    }
+
     if (id === 'temp') {
-        if (percent < 0.3) return '#3b82f6';       // Cold - Blue
-        if (percent < 0.5) return '#22c55e';        // Comfortable - Green
-        if (percent < 0.7) return '#eab308';        // Warm - Yellow
-        if (percent < 0.85) return '#f97316';       // Hot - Orange
-        return '#ef4444';                            // Danger - Red
+        if (percent < 0.30) return '#38bdf8';       // Cold - Light Blue
+        if (percent < 0.55) return '#10b981';       // Comfortable - Emerald
+        if (percent < 0.75) return '#f59e0b';       // Warm - Amber
+        return '#ef4444';                           // Danger - Red
     }
 
     if (id === 'humid') {
-        if (percent < 0.2) return '#f97316';        // Too Dry - Orange
-        if (percent < 0.4) return '#22c55e';        // Comfortable - Green
-        if (percent < 0.7) return '#3b82f6';        // Normal - Blue
-        if (percent < 0.85) return '#eab308';       // Humid - Yellow
-        return '#ef4444';                            // High - Red
+        if (percent < 0.25) return '#f59e0b';       // Dry - Amber
+        if (percent < 0.65) return '#06b6d4';       // Optimal - Cyan
+        if (percent < 0.85) return '#3b82f6';       // High - Blue
+        return '#ef4444';                           // Excessive - Red
     }
 
     if (id === 'gas') {
-        if (percent < 0.25) return '#22c55e';       // Clean Air - Green
-        if (percent < 0.45) return '#eab308';       // Moderate - Yellow
-        if (percent < 0.65) return '#f97316';       // Poor - Orange
-        return '#ef4444';                            // Hazardous - Red
+        if (percent < 0.25) return '#10b981';       // Clean - Emerald
+        if (percent < 0.40) return '#f59e0b';       // Moderate - Amber
+        if (percent < 0.60) return '#f97316';       // Poor - Orange
+        return '#ef4444';                           // Hazardous - Crimson
     }
 
-    return '#3b82f6';
+    return '#94a3b8';
 }
 
 /**
@@ -127,37 +159,109 @@ function updateStatus(id, percent) {
     let text = '', cssClass = '';
 
     if (id === 'temp') {
-        if (percent < 0.3) { text = 'Cold'; cssClass = 'moderate'; }
-        else if (percent < 0.5) { text = 'Comfortable'; cssClass = 'good'; }
-        else if (percent < 0.7) { text = 'Warm'; cssClass = 'moderate'; }
-        else if (percent < 0.8) { text = 'Hot'; cssClass = 'poor'; }
+        if (percent < 0.30) { text = 'Cool'; cssClass = 'moderate'; }
+        else if (percent < 0.55) { text = 'Comfortable'; cssClass = 'good'; }
+        else if (percent < 0.75) { text = 'Warm'; cssClass = 'moderate'; }
         else { text = 'Extreme Heat!'; cssClass = 'danger'; }
     }
 
     if (id === 'humid') {
-        if (percent < 0.2) { text = 'Too Dry'; cssClass = 'poor'; }
-        else if (percent < 0.4) { text = 'Comfortable'; cssClass = 'good'; }
-        else if (percent < 0.7) { text = 'Normal'; cssClass = 'good'; }
-        else if (percent < 0.85) { text = 'Humid'; cssClass = 'moderate'; }
+        if (percent < 0.25) { text = 'Low Moisture'; cssClass = 'moderate'; }
+        else if (percent < 0.65) { text = 'Optimal Humidity'; cssClass = 'good'; }
+        else if (percent < 0.85) { text = 'Elevated'; cssClass = 'moderate'; }
         else { text = 'Excessive Humidity!'; cssClass = 'danger'; }
     }
 
     if (id === 'gas') {
         if (percent < 0.25) { text = 'Clean Air'; cssClass = 'good'; }
-        else if (percent < 0.45) { text = 'Moderate'; cssClass = 'moderate'; }
-        else if (percent < 0.65) { text = 'Poor Air Quality'; cssClass = 'poor'; }
-        else { text = 'Hazardous Gas Detected!'; cssClass = 'danger'; }
+        else if (percent < 0.40) { text = 'Acceptable'; cssClass = 'good'; }
+        else if (percent < 0.60) { text = 'Moderate VOCs'; cssClass = 'moderate'; }
+        else { text = 'Hazardous Smoke/Gas!'; cssClass = 'danger'; }
     }
 
     statusEl.textContent = text;
     statusEl.className = 'gauge-status ' + cssClass;
 }
 
-/**
- * ============================================
- * EMERGENCY SYSTEM LOGIC
- * ============================================
- */
+// ==========================================================================
+// BATTERY & SYSTEM DIAGNOSTICS
+// ==========================================================================
+function updateBattery(percent) {
+    percent = Math.max(0, Math.min(100, percent));
+
+    const bar = document.getElementById('batteryBar');
+    const valueEl = document.getElementById('batteryValue');
+    const voltageEl = document.getElementById('batteryVoltage');
+    const iconEl = document.getElementById('batteryIcon');
+
+    // Approximate Li-ion cell voltage: 3.2V (0%) to 4.2V (100%)
+    const estimatedVoltage = (3.20 + (percent / 100) * 1.00).toFixed(2);
+    if (voltageEl) voltageEl.textContent = `${estimatedVoltage}V`;
+
+    if (bar) {
+        bar.style.width = percent + '%';
+        if (percent > 60) {
+            bar.style.background = 'linear-gradient(90deg, #10b981, #06b6d4)';
+        } else if (percent > 25) {
+            bar.style.background = 'linear-gradient(90deg, #f59e0b, #f97316)';
+        } else {
+            bar.style.background = 'linear-gradient(90deg, #ef4444, #f97316)';
+        }
+    }
+
+    if (valueEl) valueEl.textContent = Math.round(percent) + '%';
+
+    if (iconEl) {
+        iconEl.className = 'fas ';
+        if (percent > 80) iconEl.className += 'fa-battery-full';
+        else if (percent > 55) iconEl.className += 'fa-battery-three-quarters';
+        else if (percent > 30) iconEl.className += 'fa-battery-half';
+        else if (percent > 10) iconEl.className += 'fa-battery-quarter';
+        else iconEl.className += 'fa-battery-empty';
+    }
+}
+
+function setConnectionStatus(isOnline) {
+    const dot = document.getElementById('mainStatusDot');
+    const text = document.getElementById('mainStatusText');
+    const banner = document.getElementById('statusBanner');
+    const bannerMsg = document.getElementById('statusMessage');
+
+    if (dot && text) {
+        if (isOnline) {
+            dot.className = 'status-dot online';
+            text.textContent = 'Live';
+            if (!isEmergencyActive && banner && bannerMsg) {
+                banner.className = 'status-banner success';
+                bannerMsg.textContent = 'ESP32 is connected and sending live sensor data.';
+            }
+        } else {
+            dot.className = 'status-dot offline';
+            text.textContent = 'Disconnected';
+            if (!isEmergencyActive && banner && bannerMsg) {
+                banner.className = 'status-banner warning';
+                bannerMsg.textContent = 'Waiting for ESP32 sensor telemetry...';
+            }
+        }
+    }
+}
+
+function updateTimestamp() {
+    const el = document.getElementById('lastUpdated');
+    if (el) {
+        const now = new Date();
+        el.textContent = now.toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+    }
+}
+
+// ==========================================================================
+// REAL-TIME EMERGENCY ENGINE (BLACK & RED DUAL STATE)
+// ==========================================================================
 function evaluateEmergencyConditions(temp, humid, gas) {
     if (isSimulationActive) return;
 
@@ -185,108 +289,66 @@ function applyEmergencyState(state) {
     const humidCard = document.getElementById('humidCard');
     const banner = document.getElementById('statusBanner');
     const bannerMsg = document.getElementById('statusMessage');
+    const safetyStateEl = document.getElementById('statSafetyState');
 
     if (state.active) {
         isEmergencyActive = true;
         body.classList.add('emergency-mode');
 
-        // Blink the specific sensor cards that breached the threshold
-        if (state.gasAbnormal) {
-            gasCard.classList.add('emergency-blink');
-        } else {
-            gasCard.classList.remove('emergency-blink');
-        }
-
-        if (state.tempAbnormal) {
-            tempCard.classList.add('emergency-blink');
-        } else {
-            tempCard.classList.remove('emergency-blink');
-        }
-
-        if (state.humidAbnormal) {
-            humidCard.classList.add('emergency-blink');
-        } else {
-            humidCard.classList.remove('emergency-blink');
-        }
+        // Blink specific cards that breached thresholds
+        if (gasCard) gasCard.classList.toggle('emergency-blink', state.gasAbnormal);
+        if (tempCard) tempCard.classList.toggle('emergency-blink', state.tempAbnormal);
+        if (humidCard) humidCard.classList.toggle('emergency-blink', state.humidAbnormal);
 
         const reasons = [];
         if (state.gasAbnormal) reasons.push(`Hazardous Gas (${Math.round(state.gasVal)} PPM)`);
-        if (state.tempAbnormal) reasons.push(`Extreme Temp (${state.tempVal.toFixed(1)}°C)`);
-        if (state.humidAbnormal) reasons.push(`Extreme Humidity (${state.humidVal.toFixed(1)}%)`);
+        if (state.tempAbnormal) reasons.push(`Critical Temp (${state.tempVal.toFixed(1)}°C)`);
+        if (state.humidAbnormal) reasons.push(`Excessive Humidity (${state.humidVal.toFixed(1)}%)`);
 
-        banner.className = 'status-banner danger';
-        bannerMsg.innerHTML = `<strong>⚠️ EMERGENCY ALERT:</strong> ${reasons.join(' & ')} detected! Notification dispatched.`;
+        if (banner && bannerMsg) {
+            banner.className = 'status-banner danger';
+            bannerMsg.innerHTML = `<strong>⚠️ EMERGENCY HAZARD:</strong> ${reasons.join(' & ')} detected!`;
+        }
 
-        // Start audible siren
+        if (safetyStateEl) {
+            safetyStateEl.textContent = 'CRITICAL';
+            safetyStateEl.style.color = '#ff1744';
+        }
+
+        // Start Web Audio Siren
         startAudioAlert();
 
-        // Dispatch Real Email via Web3Forms
+        // Dispatch Real Email Alert
         triggerEmergencyEmailNotification(reasons.join(', '));
+
+        // Add to Incident Audit Ledger (if newly triggered)
+        recordIncidentEvent("EMERGENCY BREACH", reasons.join(', '), state.gasVal, state.tempVal, state.humidVal);
 
     } else {
         isEmergencyActive = false;
         body.classList.remove('emergency-mode');
-        gasCard.classList.remove('emergency-blink');
-        tempCard.classList.remove('emergency-blink');
-        humidCard.classList.remove('emergency-blink');
+
+        if (gasCard) gasCard.classList.remove('emergency-blink');
+        if (tempCard) tempCard.classList.remove('emergency-blink');
+        if (humidCard) humidCard.classList.remove('emergency-blink');
 
         stopAudioAlert();
 
-        banner.className = 'status-banner success';
-        bannerMsg.textContent = 'ESP32 is connected and sensor readings are safe.';
+        if (banner && bannerMsg) {
+            banner.className = 'status-banner success';
+            bannerMsg.textContent = 'ESP32 telemetry stream is active and within safe thresholds.';
+        }
+
+        if (safetyStateEl) {
+            safetyStateEl.textContent = 'OPTIMAL';
+            safetyStateEl.style.color = '#10b981';
+        }
     }
 }
 
-/**
- * Toggle Test Emergency Simulation
- */
-function toggleEmergencySimulation() {
-    const simBtn = document.getElementById('simEmergencyBtn');
-    isSimulationActive = !isSimulationActive;
-
-    if (isSimulationActive) {
-        simBtn.classList.add('active');
-        simBtn.innerHTML = '<i class="fas fa-stop"></i> <span>Stop Simulation</span>';
-
-        // Simulate dangerous levels
-        updateGauge('gas', 2450, GAS_MIN, GAS_MAX);
-        updateGauge('temp', 42.5, TEMP_MIN, TEMP_MAX);
-        updateGauge('humid', 60.0, HUMID_MIN, HUMID_MAX);
-
-        applyEmergencyState({
-            active: true,
-            gasAbnormal: true,
-            tempAbnormal: true,
-            humidAbnormal: false,
-            gasVal: 2450,
-            tempVal: 42.5,
-            humidVal: 60.0
-        });
-
-    } else {
-        simBtn.classList.remove('active');
-        simBtn.innerHTML = '<i class="fas fa-bolt"></i> <span>Test Emergency UI</span>';
-
-        // Reset to normal values
-        updateGauge('gas', 420, GAS_MIN, GAS_MAX);
-        updateGauge('temp', 27.2, TEMP_MIN, TEMP_MAX);
-        updateGauge('humid', 54.0, HUMID_MIN, HUMID_MAX);
-
-        applyEmergencyState({
-            active: false,
-            gasAbnormal: false,
-            tempAbnormal: false,
-            humidAbnormal: false,
-            gasVal: 420,
-            tempVal: 27.2,
-            humidVal: 54.0
-        });
-    }
-}
-
-/**
- * Web Audio API Siren
- */
+// ==========================================================================
+// WEB AUDIO API EMERGENCY SIREN & MUTE TOGGLE
+// ==========================================================================
 function startAudioAlert() {
     if (isAudioMuted || sirenInterval) return;
 
@@ -301,22 +363,22 @@ function startAudioAlert() {
 
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(880, audioContext.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.3);
+            osc.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.35);
 
-            gain.gain.setValueAtTime(0.15, audioContext.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.18, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.35);
 
             osc.connect(gain);
             gain.connect(audioContext.destination);
 
             osc.start();
-            osc.stop(audioContext.currentTime + 0.3);
+            osc.stop(audioContext.currentTime + 0.35);
         }
 
         playBeep();
         sirenInterval = setInterval(playBeep, 1200);
     } catch (e) {
-        console.warn("Audio Context init waiting for user gesture:", e);
+        console.warn("Audio Context init note:", e);
     }
 }
 
@@ -334,45 +396,85 @@ function toggleMuteAudio() {
 
     if (isAudioMuted) {
         stopAudioAlert();
-        muteIcon.className = 'fas fa-volume-xmark';
-        muteText.textContent = 'Unmute';
+        if (muteIcon) muteIcon.className = 'fas fa-volume-xmark';
+        if (muteText) muteText.textContent = 'Unmute';
     } else {
-        muteIcon.className = 'fas fa-volume-high';
-        muteText.textContent = 'Mute';
+        if (muteIcon) muteIcon.className = 'fas fa-volume-high';
+        if (muteText) muteText.textContent = 'Mute';
         if (isEmergencyActive) startAudioAlert();
     }
 }
 
-/**
- * ============================================
- * EMAIL DISPATCH VIA WEB3FORMS (Real Gmail delivery)
- * ============================================
- */
+// ==========================================================================
+// SIMULATION TOGGLE (Allows User to Preview Black & Red Emergency Mode)
+// ==========================================================================
+function toggleEmergencySimulation() {
+    const simBtn = document.getElementById('simEmergencyBtn');
+    isSimulationActive = !isSimulationActive;
+
+    if (isSimulationActive) {
+        if (simBtn) {
+            simBtn.classList.add('active');
+            simBtn.innerHTML = '<i class="fas fa-stop"></i> <span>Stop Simulation</span>';
+        }
+
+        // Push test hazardous sensor levels
+        updateGauge('gas', 2450, GAS_MIN, GAS_MAX);
+        updateGauge('temp', 42.5, TEMP_MIN, TEMP_MAX);
+        updateGauge('humid', 60.0, HUMID_MIN, HUMID_MAX);
+
+        applyEmergencyState({
+            active: true,
+            gasAbnormal: true,
+            tempAbnormal: true,
+            humidAbnormal: false,
+            gasVal: 2450,
+            tempVal: 42.5,
+            humidVal: 60.0
+        });
+
+    } else {
+        if (simBtn) {
+            simBtn.classList.remove('active');
+            simBtn.innerHTML = '<i class="fas fa-bolt"></i> <span>Test Alert</span>';
+        }
+
+        // Return to baseline normal values
+        updateGauge('gas', 420, GAS_MIN, GAS_MAX);
+        updateGauge('temp', 26.5, TEMP_MIN, TEMP_MAX);
+        updateGauge('humid', 54.0, HUMID_MIN, HUMID_MAX);
+
+        applyEmergencyState({
+            active: false,
+            gasAbnormal: false,
+            tempAbnormal: false,
+            humidAbnormal: false,
+            gasVal: 420,
+            tempVal: 26.5,
+            humidVal: 54.0
+        });
+    }
+}
+
+// ==========================================================================
+// EMAILJS EMERGENCY ALERT DISPATCH
+// ==========================================================================
 function triggerEmergencyEmailNotification(incidentDetails) {
     const user = auth.currentUser;
     const targetEmail = user && user.email ? user.email : "fafnir007vk@gmail.com";
     const targetName = user && user.displayName ? user.displayName : "Customer";
 
     const now = Date.now();
-    // Cooldown check (60s during testing)
     if (now - lastEmailSentTimestamp < EMAIL_COOLDOWN_MS) {
-        const remainingSec = Math.round((EMAIL_COOLDOWN_MS - (now - lastEmailSentTimestamp)) / 1000);
-        console.log(`[Email Cooldown] Next email alert allowed in ${remainingSec}s`);
-        return;
+        return; // Respect cooldown during ongoing emergency
     }
 
     lastEmailSentTimestamp = now;
 
-    // Update dispatch status in card
     const statusEl = document.getElementById('emailDispatchStatus');
-    if (statusEl) {
-        statusEl.textContent = `Sending to ${targetEmail}...`;
-    }
+    if (statusEl) statusEl.textContent = `Dispatching to ${targetEmail}...`;
 
-    // Show floating toast
     showEmailToast(targetEmail);
-
-    console.log(`🚨 [DISPATCHING REAL EMAIL via EmailJS] Recipient: ${targetEmail}`);
 
     const templateParams = {
         to_email: targetEmail,
@@ -387,29 +489,33 @@ function triggerEmergencyEmailNotification(incidentDetails) {
     if (window.emailjs) {
         emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, templateParams)
             .then((response) => {
-                console.log("✅ [EMAIL DELIVERED VIA EMAILJS]:", response.status, response.text);
-                if (statusEl) {
-                    statusEl.textContent = `Dispatched to ${targetEmail} (Delivered)`;
-                }
+                console.log("✅ [EMAIL DELIVERED VIA EMAILJS]:", response.status);
+                if (statusEl) statusEl.textContent = `Sent to ${targetEmail} (Delivered)`;
             })
             .catch((error) => {
                 console.error("❌ [EMAILJS DISPATCH ERROR]:", error);
-                if (statusEl) {
-                    statusEl.textContent = `Delivery failed: ${error.text || error.message}`;
-                }
+                if (statusEl) statusEl.textContent = `Delivery failed: ${error.text || error.message}`;
             });
     }
 
-    // Trigger Browser Push Notification (Lock-screen / System banner)
+    // System Desktop Notification (if enabled)
     if ("Notification" in window && Notification.permission === "granted") {
         try {
-            new Notification("Air Quality Notice", {
-                body: `Elevated sensor reading: ${incidentDetails}. Check room ventilation.`,
+            new Notification("AEROMONITOR CRITICAL ALERT", {
+                body: `Environmental Hazard: ${incidentDetails}. Evacuate or ventilate immediately.`,
                 icon: "https://img.icons8.com/color/96/wind.png"
             });
-        } catch (e) {
-            console.warn("Notification error:", e);
-        }
+        } catch (e) {}
+    }
+}
+
+function showEmailToast(recipientEmail) {
+    const toast = document.getElementById('emailToast');
+    const emailAddr = document.getElementById('emailToastAddress');
+    if (toast && emailAddr) {
+        emailAddr.textContent = `Emergency alert dispatched to ${recipientEmail}`;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 6000);
     }
 }
 
@@ -420,9 +526,8 @@ function checkAndSendWelcomeEmail(user) {
     if (!user || !user.email) return;
 
     const storageKey = 'welcome_sent_' + user.uid;
-    if (localStorage.getItem(storageKey)) return; // Already warmed up
+    if (localStorage.getItem(storageKey)) return;
 
-    console.log(`[ONBOARDING] Sending Welcome Email to warm up inbox: ${user.email}`);
     localStorage.setItem(storageKey, 'true');
 
     const welcomeParams = {
@@ -442,102 +547,476 @@ function checkAndSendWelcomeEmail(user) {
     }
 }
 
-// Prompt for Browser Push Notification on first load
+// Request Notification Permission
 if ("Notification" in window && Notification.permission === "default") {
     setTimeout(() => {
-        Notification.requestPermission().then((perm) => {
-            console.log("Browser notification permission:", perm);
-        });
-    }, 2000);
+        Notification.requestPermission().catch(() => {});
+    }, 2500);
 }
 
-function showEmailToast(recipientEmail) {
-    const toast = document.getElementById('emailToast');
-    const emailAddr = document.getElementById('emailToastAddress');
-    if (toast && emailAddr) {
-        emailAddr.textContent = `Alert dispatched to ${recipientEmail}`;
-        toast.classList.add('show');
-        setTimeout(() => {
-            toast.classList.remove('show');
-        }, 6000);
+// ==========================================================================
+// CHART.JS INITIALIZATION (LIVE STREAMING & HISTORICAL)
+// ==========================================================================
+function initCharts() {
+    // 1. Live Streaming Chart (Rolling 30 Data Points)
+    const liveCtx = document.getElementById('liveStreamingChart');
+    if (liveCtx && !liveChartInstance) {
+        liveChartInstance = new Chart(liveCtx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Temperature (°C)',
+                        data: [],
+                        borderColor: '#f97316',
+                        backgroundColor: 'rgba(249, 115, 22, 0.08)',
+                        borderWidth: 2,
+                        tension: 0.35,
+                        fill: true,
+                        yAxisID: 'yTempHumid',
+                        pointRadius: 2,
+                        pointHoverRadius: 5
+                    },
+                    {
+                        label: 'Humidity (%)',
+                        data: [],
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.08)',
+                        borderWidth: 2,
+                        tension: 0.35,
+                        fill: true,
+                        yAxisID: 'yTempHumid',
+                        pointRadius: 2,
+                        pointHoverRadius: 5
+                    },
+                    {
+                        label: 'Gas (PPM)',
+                        data: [],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                        borderWidth: 2,
+                        tension: 0.35,
+                        fill: false,
+                        yAxisID: 'yGas',
+                        pointRadius: 2,
+                        pointHoverRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 400 },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 15, 22, 0.95)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#cbd5e1',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        padding: 10,
+                        bodyFont: { family: 'JetBrains Mono' }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 }, maxRotation: 0 }
+                    },
+                    yTempHumid: {
+                        type: 'linear',
+                        position: 'left',
+                        min: 0,
+                        max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } }
+                    },
+                    yGas: {
+                        type: 'linear',
+                        position: 'right',
+                        min: 0,
+                        max: 4095,
+                        grid: { display: false },
+                        ticks: { color: '#10b981', font: { family: 'JetBrains Mono', size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Historical Trend Chart
+    const histCtx = document.getElementById('historicalChart');
+    if (histCtx && !historicalChartInstance) {
+        historicalChartInstance = new Chart(histCtx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Temperature (°C)',
+                        data: [],
+                        borderColor: '#f97316',
+                        backgroundColor: 'rgba(249, 115, 22, 0.05)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        yAxisID: 'yTempHumid'
+                    },
+                    {
+                        label: 'Humidity (%)',
+                        data: [],
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.05)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        yAxisID: 'yTempHumid'
+                    },
+                    {
+                        label: 'Gas (PPM)',
+                        data: [],
+                        borderColor: '#10b981',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: false,
+                        yAxisID: 'yGas'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 600 },
+                plugins: {
+                    legend: { labels: { color: '#cbd5e1', font: { family: 'Poppins' } } },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 15, 22, 0.95)',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        bodyFont: { family: 'JetBrains Mono' }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } }
+                    },
+                    yTempHumid: {
+                        type: 'linear',
+                        position: 'left',
+                        min: 0,
+                        max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } }
+                    },
+                    yGas: {
+                        type: 'linear',
+                        position: 'right',
+                        min: 0,
+                        max: 4095,
+                        grid: { display: false },
+                        ticks: { color: '#10b981', font: { family: 'JetBrains Mono', size: 10 } }
+                    }
+                }
+            }
+        });
     }
 }
 
 /**
- * Update Battery Level
+ * Push fresh telemetry point into charts and buffer
  */
-function updateBattery(percent) {
-    percent = Math.max(0, Math.min(100, percent));
+function recordTelemetryPoint(temp, humid, gas) {
+    const now = new Date();
+    const timeLabel = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
-    const bar = document.getElementById('batteryBar');
-    const valueEl = document.getElementById('batteryValue');
-    const iconEl = document.getElementById('batteryIcon');
+    // Append to continuous buffer
+    telemetryBuffer.timestamps.push(timeLabel);
+    telemetryBuffer.temp.push(temp);
+    telemetryBuffer.humid.push(humid);
+    telemetryBuffer.gas.push(gas);
 
-    if (bar) {
-        bar.style.width = percent + '%';
-        if (percent > 60) {
-            bar.style.background = 'linear-gradient(90deg, #22c55e, #06b6d4)';
-        } else if (percent > 30) {
-            bar.style.background = 'linear-gradient(90deg, #eab308, #f97316)';
-        } else {
-            bar.style.background = 'linear-gradient(90deg, #ef4444, #f97316)';
-        }
+    if (telemetryBuffer.timestamps.length > MAX_HISTORY_POINTS) {
+        telemetryBuffer.timestamps.shift();
+        telemetryBuffer.temp.shift();
+        telemetryBuffer.humid.shift();
+        telemetryBuffer.gas.shift();
     }
 
-    if (valueEl) valueEl.textContent = Math.round(percent) + '%';
+    // 1. Update Live Streaming Chart (Last 30 Points)
+    if (liveChartInstance) {
+        const liveLabels = telemetryBuffer.timestamps.slice(-MAX_LIVE_POINTS);
+        const liveTemp = telemetryBuffer.temp.slice(-MAX_LIVE_POINTS);
+        const liveHumid = telemetryBuffer.humid.slice(-MAX_LIVE_POINTS);
+        const liveGas = telemetryBuffer.gas.slice(-MAX_LIVE_POINTS);
 
-    if (iconEl) {
-        iconEl.className = 'fas ';
-        if (percent > 75) iconEl.className += 'fa-battery-full';
-        else if (percent > 50) iconEl.className += 'fa-battery-three-quarters';
-        else if (percent > 25) iconEl.className += 'fa-battery-half';
-        else if (percent > 10) iconEl.className += 'fa-battery-quarter';
-        else iconEl.className += 'fa-battery-empty';
+        liveChartInstance.data.labels = liveLabels;
+        liveChartInstance.data.datasets[0].data = liveTemp;
+        liveChartInstance.data.datasets[1].data = liveHumid;
+        liveChartInstance.data.datasets[2].data = liveGas;
+        liveChartInstance.update('none'); // Update smoothly without lag
+    }
+
+    // 2. Update Live Analytics Statistical Cards (Min, Max, Avg, Current)
+    updateStatisticalSummary(temp, humid, gas);
+
+    // 3. Update Historical Chart if active
+    updateHistoricalChartDisplay();
+}
+
+/**
+ * Calculate Min, Max, and Average for all sensors
+ */
+function updateStatisticalSummary(currentTemp, currentHumid, currentGas) {
+    const gasArr = telemetryBuffer.gas;
+    const tempArr = telemetryBuffer.temp;
+    const humidArr = telemetryBuffer.humid;
+
+    if (gasArr.length === 0) return;
+
+    // Calculations
+    const minGas = Math.min(...gasArr);
+    const maxGas = Math.max(...gasArr);
+    const avgGas = Math.round(gasArr.reduce((a, b) => a + b, 0) / gasArr.length);
+
+    const minTemp = Math.min(...tempArr).toFixed(1);
+    const maxTemp = Math.max(...tempArr).toFixed(1);
+    const avgTemp = (tempArr.reduce((a, b) => a + b, 0) / tempArr.length).toFixed(1);
+
+    const minHumid = Math.min(...humidArr).toFixed(1);
+    const maxHumid = Math.max(...humidArr).toFixed(1);
+    const avgHumid = (humidArr.reduce((a, b) => a + b, 0) / humidArr.length).toFixed(1);
+
+    // Update DOM
+    const statCurrentGas = document.getElementById('statCurrentGas');
+    const statMinGas = document.getElementById('statMinGas');
+    const statMaxGas = document.getElementById('statMaxGas');
+    const statAvgGas = document.getElementById('statAvgGas');
+
+    if (statCurrentGas) statCurrentGas.innerHTML = `${Math.round(currentGas)} <small>PPM</small>`;
+    if (statMinGas) statMinGas.textContent = `${minGas} PPM`;
+    if (statMaxGas) statMaxGas.textContent = `${maxGas} PPM`;
+    if (statAvgGas) statAvgGas.textContent = `${avgGas} PPM`;
+
+    const statCurrentTemp = document.getElementById('statCurrentTemp');
+    const statMinTemp = document.getElementById('statMinTemp');
+    const statMaxTemp = document.getElementById('statMaxTemp');
+    const statAvgTemp = document.getElementById('statAvgTemp');
+
+    if (statCurrentTemp) statCurrentTemp.innerHTML = `${currentTemp.toFixed(1)} <small>°C</small>`;
+    if (statMinTemp) statMinTemp.textContent = `${minTemp}°C`;
+    if (statMaxTemp) statMaxTemp.textContent = `${maxTemp}°C`;
+    if (statAvgTemp) statAvgTemp.textContent = `${avgTemp}°C`;
+
+    const statCurrentHumid = document.getElementById('statCurrentHumid');
+    const statMinHumid = document.getElementById('statMinHumid');
+    const statMaxHumid = document.getElementById('statMaxHumid');
+    const statAvgHumid = document.getElementById('statAvgHumid');
+
+    if (statCurrentHumid) statCurrentHumid.innerHTML = `${currentHumid.toFixed(1)} <small>%</small>`;
+    if (statMinHumid) statMinHumid.textContent = `${minHumid}%`;
+    if (statMaxHumid) statMaxHumid.textContent = `${maxHumid}%`;
+    if (statAvgHumid) statAvgHumid.textContent = `${avgHumid}%`;
+}
+
+/**
+ * Filter Historical Data by selected Range ('1h', '6h', '24h')
+ */
+function setHistoryRange(range) {
+    currentHistoryFilter = range;
+
+    // Update filter pill UI buttons
+    const filterPills = document.querySelectorAll('.time-filter-group .filter-pill');
+    filterPills.forEach(btn => {
+        if (btn.textContent.toLowerCase().includes(range)) {
+            btn.classList.add('active');
+        } else if (!btn.textContent.toLowerCase().includes('clear')) {
+            btn.classList.remove('active');
+        }
+    });
+
+    const label = document.getElementById('historyRangeLabel');
+    if (label) {
+        if (range === '1h') label.textContent = 'Showing Last 1 Hour Window';
+        else if (range === '6h') label.textContent = 'Showing Last 6 Hours Window';
+        else label.textContent = 'Showing Full 24 Hours Archive';
+    }
+
+    updateHistoricalChartDisplay();
+}
+
+function updateHistoricalChartDisplay() {
+    if (!historicalChartInstance) return;
+
+    let pointsToShow = 60; // Default: ~60 points (~3 mins to 1 hour depending on frequency)
+    if (currentHistoryFilter === '6h') pointsToShow = 200;
+    if (currentHistoryFilter === '24h') pointsToShow = MAX_HISTORY_POINTS;
+
+    historicalChartInstance.data.labels = telemetryBuffer.timestamps.slice(-pointsToShow);
+    historicalChartInstance.data.datasets[0].data = telemetryBuffer.temp.slice(-pointsToShow);
+    historicalChartInstance.data.datasets[1].data = telemetryBuffer.humid.slice(-pointsToShow);
+    historicalChartInstance.data.datasets[2].data = telemetryBuffer.gas.slice(-pointsToShow);
+    historicalChartInstance.update();
+}
+
+function clearHistoryLog() {
+    telemetryBuffer.timestamps = [];
+    telemetryBuffer.gas = [];
+    telemetryBuffer.temp = [];
+    telemetryBuffer.humid = [];
+    incidentLedger = [];
+    emergencyIncidentCount = 0;
+
+    const statCount = document.getElementById('statEmergencyCount');
+    if (statCount) statCount.innerHTML = `Incidents Today: <b>0</b>`;
+
+    const logTbody = document.getElementById('incidentLogTbody');
+    if (logTbody) {
+        logTbody.innerHTML = `
+            <tr class="log-empty-row">
+                <td colspan="7">No emergency incidents registered. System operating within safe baseline parameters.</td>
+            </tr>
+        `;
+    }
+
+    const logCounter = document.getElementById('logRecordCount');
+    if (logCounter) logCounter.textContent = '0 Records Recorded';
+
+    if (liveChartInstance) {
+        liveChartInstance.data.labels = [];
+        liveChartInstance.data.datasets.forEach(d => d.data = []);
+        liveChartInstance.update();
+    }
+
+    if (historicalChartInstance) {
+        historicalChartInstance.data.labels = [];
+        historicalChartInstance.data.datasets.forEach(d => d.data = []);
+        historicalChartInstance.update();
     }
 }
 
-function setConnectionStatus(isOnline) {
-    const dot = document.querySelector('.status-dot');
-    const text = document.querySelector('.status-text');
-    const banner = document.getElementById('statusBanner');
-    const bannerMsg = document.getElementById('statusMessage');
+// ==========================================================================
+// INCIDENT AUDIT LEDGER (TAB 3 DATA TABLE)
+// ==========================================================================
+function recordIncidentEvent(eventType, detailMsg, gas, temp, humid) {
+    emergencyIncidentCount++;
+    const statCount = document.getElementById('statEmergencyCount');
+    if (statCount) statCount.innerHTML = `Incidents Today: <b>${emergencyIncidentCount}</b>`;
 
-    if (isOnline) {
-        dot.className = 'status-dot online';
-        text.textContent = 'Live';
-        if (!isEmergencyActive) {
-            banner.className = 'status-banner success';
-            bannerMsg.textContent = 'ESP32 is connected and sending live sensor data.';
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+
+    const user = auth.currentUser;
+    const recipient = user && user.email ? user.email : "Customer";
+
+    const record = {
+        time: timeStr,
+        event: eventType,
+        gas: Math.round(gas),
+        temp: temp.toFixed(1),
+        humid: humid.toFixed(1),
+        battery: document.getElementById('batteryValue') ? document.getElementById('batteryValue').textContent : '92%',
+        action: `Email alert dispatched to ${recipient}`
+    };
+
+    incidentLedger.unshift(record);
+    if (incidentLedger.length > 50) incidentLedger.pop();
+
+    renderIncidentTable();
+}
+
+function renderIncidentTable() {
+    const tbody = document.getElementById('incidentLogTbody');
+    const counter = document.getElementById('logRecordCount');
+    if (!tbody) return;
+
+    if (incidentLedger.length === 0) {
+        tbody.innerHTML = `
+            <tr class="log-empty-row">
+                <td colspan="7">No emergency incidents registered. System operating within safe baseline parameters.</td>
+            </tr>
+        `;
+        if (counter) counter.textContent = '0 Records Recorded';
+        return;
+    }
+
+    let rowsHtml = '';
+    incidentLedger.forEach(row => {
+        rowsHtml += `
+            <tr>
+                <td class="font-mono">${row.time}</td>
+                <td><span class="log-badge danger">${row.event}</span></td>
+                <td class="font-mono"><b>${row.gas} PPM</b></td>
+                <td class="font-mono">${row.temp}°C</td>
+                <td class="font-mono">${row.humid}%</td>
+                <td class="font-mono">${row.battery}</td>
+                <td><small style="color: var(--text-silver);">${row.action}</small></td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = rowsHtml;
+    if (counter) counter.textContent = `${incidentLedger.length} Records Recorded`;
+}
+
+// ==========================================================================
+// FOUR-TAB DASHBOARD NAVIGATION SWITCHER
+// ==========================================================================
+function switchDashboardTab(tabName) {
+    const tabDashboardBtn = document.getElementById('tabDashboardBtn');
+    const tabLiveStatsBtn = document.getElementById('tabLiveStatsBtn');
+    const tabHistoryBtn = document.getElementById('tabHistoryBtn');
+    const tabInstructionsBtn = document.getElementById('tabInstructionsBtn');
+
+    const viewDashboard = document.getElementById('viewDashboard');
+    const viewLiveStats = document.getElementById('viewLiveStats');
+    const viewHistory = document.getElementById('viewHistory');
+    const viewInstructions = document.getElementById('viewInstructions');
+
+    // Remove active class from all buttons
+    [tabDashboardBtn, tabLiveStatsBtn, tabHistoryBtn, tabInstructionsBtn].forEach(btn => {
+        if (btn) btn.classList.remove('active');
+    });
+
+    // Hide all view panes
+    [viewDashboard, viewLiveStats, viewHistory, viewInstructions].forEach(pane => {
+        if (pane) pane.style.display = 'none';
+    });
+
+    // Activate selected tab
+    if (tabName === 'dashboard') {
+        if (tabDashboardBtn) tabDashboardBtn.classList.add('active');
+        if (viewDashboard) viewDashboard.style.display = 'block';
+    } else if (tabName === 'liveStats') {
+        if (tabLiveStatsBtn) tabLiveStatsBtn.classList.add('active');
+        if (viewLiveStats) {
+            viewLiveStats.style.display = 'block';
+            if (liveChartInstance) {
+                liveChartInstance.resize();
+                liveChartInstance.update();
+            }
         }
-    } else {
-        dot.className = 'status-dot offline';
-        text.textContent = 'Disconnected';
-        if (!isEmergencyActive) {
-            banner.className = 'status-banner warning';
-            bannerMsg.textContent = 'Waiting for ESP32 sensor data...';
+    } else if (tabName === 'history') {
+        if (tabHistoryBtn) tabHistoryBtn.classList.add('active');
+        if (viewHistory) {
+            viewHistory.style.display = 'block';
+            if (historicalChartInstance) {
+                historicalChartInstance.resize();
+                updateHistoricalChartDisplay();
+            }
         }
+    } else if (tabName === 'instructions') {
+        if (tabInstructionsBtn) tabInstructionsBtn.classList.add('active');
+        if (viewInstructions) viewInstructions.style.display = 'block';
     }
 }
 
-function updateTimestamp() {
-    const el = document.getElementById('lastUpdated');
-    if (el) {
-        const now = new Date();
-        el.textContent = now.toLocaleString('en-IN', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true
-        });
-    }
-}
-
-// ============================================
-// Firebase Realtime Database Listener
-// ============================================
+// ==========================================================================
+// FIREBASE REALTIME DATABASE LISTENER
+// ==========================================================================
 const sensorRef = database.ref('sensor_data');
 let hasReceivedData = false;
 
@@ -548,39 +1027,42 @@ sensorRef.on('value', (snapshot) => {
         hasReceivedData = true;
         setConnectionStatus(true);
 
-        const temp = data.temperature !== undefined ? data.temperature : 0;
-        const humid = data.humidity !== undefined ? data.humidity : 0;
-        const gas = data.gas !== undefined ? data.gas : 0;
+        const temp = data.temperature !== undefined ? Number(data.temperature) : 25.0;
+        const humid = data.humidity !== undefined ? Number(data.humidity) : 50.0;
+        const gas = data.gas !== undefined ? Number(data.gas) : 400;
 
-        // Update gauges
+        // 1. Update Speedometer Gauges
         updateGauge('temp', temp, TEMP_MIN, TEMP_MAX);
         updateGauge('humid', humid, HUMID_MIN, HUMID_MAX);
         updateGauge('gas', gas, GAS_MIN, GAS_MAX);
 
-        // Evaluate whether any sensor is in the Emergency Danger Zone
+        // 2. Evaluate Emergency Hazard Thresholds
         evaluateEmergencyConditions(temp, humid, gas);
 
-        // Update Battery Level
+        // 3. Update Li-ion Battery
         if (data.battery !== undefined) {
             updateBattery(data.battery);
         }
 
-        // Update live status card in instructions tab
+        // 4. Record Telemetry in Waveform Charts & Stats
+        recordTelemetryPoint(temp, humid, gas);
+
+        // 5. Update Connection Guide pairing state
         const instDot = document.getElementById('instructionStatusDot');
         const instTitle = document.getElementById('instructionStatusTitle');
         const instDesc = document.getElementById('instructionStatusDesc');
         if (instDot && instTitle && instDesc) {
             instDot.className = 'status-dot online';
-            instTitle.textContent = 'Device Connected & Active';
-            instDesc.textContent = 'ESP32 is transmitting real-time air quality telemetry.';
+            instTitle.textContent = 'Device Linked & Actively Transmitting';
+            instDesc.textContent = 'ESP32 is sending sensor telemetry every 3 seconds.';
         }
 
-        // Update timestamp
+        // 6. Update Timestamp
         updateTimestamp();
     }
 });
 
-// Monitor Firebase connection state
+// Firebase Connection Status Watchdog
 const connectedRef = database.ref('.info/connected');
 connectedRef.on('value', (snap) => {
     if (snap.val() === true) {
@@ -592,24 +1074,7 @@ connectedRef.on('value', (snap) => {
     }
 });
 
-// ============================================
-// DASHBOARD NAVIGATION TAB SWITCHER
-// ============================================
-function switchDashboardTab(tabName) {
-    const tabDashboardBtn = document.getElementById('tabDashboardBtn');
-    const tabInstructionsBtn = document.getElementById('tabInstructionsBtn');
-    const viewDashboard = document.getElementById('viewDashboard');
-    const viewInstructions = document.getElementById('viewInstructions');
-
-    if (tabName === 'dashboard') {
-        tabDashboardBtn.classList.add('active');
-        tabInstructionsBtn.classList.remove('active');
-        viewDashboard.style.display = 'block';
-        viewInstructions.style.display = 'none';
-    } else {
-        tabInstructionsBtn.classList.add('active');
-        tabDashboardBtn.classList.remove('active');
-        viewDashboard.style.display = 'none';
-        viewInstructions.style.display = 'block';
-    }
-}
+// Initialize Chart.js when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    initCharts();
+});
