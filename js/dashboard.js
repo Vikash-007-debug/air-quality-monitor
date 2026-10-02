@@ -565,6 +565,14 @@ sensorRef.on('value', (snapshot) => {
             updateBattery(data.battery);
         }
 
+        // Update modal pairing status if open
+        const modalDot = document.getElementById('modalStatusDot');
+        const modalText = document.getElementById('modalStatusText');
+        if (modalDot && modalText) {
+            modalDot.className = 'status-dot online';
+            modalText.innerHTML = '<strong style="color: #22c55e;">Device Connected!</strong> Sensor data is actively syncing.';
+        }
+
         // Update timestamp
         updateTimestamp();
     }
@@ -581,3 +589,19 @@ connectedRef.on('value', (snap) => {
         }
     }
 });
+
+// ============================================
+// ADD DEVICE MODAL CONTROLS
+// ============================================
+function openAddDeviceModal() {
+    const modal = document.getElementById('addDeviceModal');
+    if (modal) modal.classList.add('show');
+}
+
+function closeAddDeviceModal(event) {
+    if (event && event.target && !event.target.classList.contains('modal-overlay') && !event.target.classList.contains('modal-close-btn')) {
+        return;
+    }
+    const modal = document.getElementById('addDeviceModal');
+    if (modal) modal.classList.remove('show');
+}
