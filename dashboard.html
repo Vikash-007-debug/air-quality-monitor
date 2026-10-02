@@ -35,6 +35,10 @@
             <span>Air Quality Monitor</span>
         </div>
         <div class="nav-right">
+            <!-- Add / Configure Device Button -->
+            <button class="add-device-btn" id="addDeviceBtn" onclick="openAddDeviceModal()" title="Add or change device Wi-Fi">
+                <i class="fas fa-plus-circle"></i> <span>Add Device</span>
+            </button>
             <!-- Test Simulator Button to preview Emergency Mode anytime -->
             <button class="sim-btn" id="simEmergencyBtn" onclick="toggleEmergencySimulation()" title="Test emergency UI and email">
                 <i class="fas fa-bolt"></i> <span>Test Emergency UI</span>
@@ -201,6 +205,59 @@
         </div>
     </div>
 
+    <!-- Add Device / Wi-Fi Setup Modal -->
+    <div class="modal-overlay" id="addDeviceModal" onclick="closeAddDeviceModal(event)">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <i class="fas fa-microchip"></i>
+                    <h3>Add / Configure Device</h3>
+                </div>
+                <button class="modal-close-btn" onclick="closeAddDeviceModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-desc">Follow these 3 quick steps on your laptop or phone to connect your ESP32 monitor to your Wi-Fi:</p>
+                
+                <div class="setup-steps">
+                    <div class="step-card">
+                        <div class="step-badge">1</div>
+                        <div class="step-info">
+                            <strong>Power ON Device</strong>
+                            <span>Turn on battery switch. (If changing Wi-Fi, hold the BOOT button for 3 seconds).</span>
+                        </div>
+                    </div>
+
+                    <div class="step-card">
+                        <div class="step-badge">2</div>
+                        <div class="step-info">
+                            <strong>Connect to Setup Wi-Fi</strong>
+                            <span>Open your laptop or phone Wi-Fi menu and connect to:</span>
+                            <div class="wifi-name-box">
+                                <i class="fas fa-wifi"></i> <code>AirQuality-Setup</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-card">
+                        <div class="step-badge">3</div>
+                        <div class="step-info">
+                            <strong>Configure Home Wi-Fi</strong>
+                            <span>Once connected to the hotspot, open the setup portal to enter your Wi-Fi password:</span>
+                            <a href="http://192.168.4.1" target="_blank" class="portal-link-btn">
+                                <i class="fas fa-arrow-up-right-from-square"></i> Open Setup Portal (192.168.4.1)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-status-box" id="devicePairingStatus">
+                    <span class="status-dot offline" id="modalStatusDot"></span>
+                    <span id="modalStatusText">Waiting for device to connect to Firebase...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -210,3 +267,4 @@
     <script src="js/dashboard.js"></script>
 </body>
 </html>
+
