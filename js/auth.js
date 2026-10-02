@@ -1,6 +1,6 @@
 // ============================================
 // Firebase Authentication (Google Sign-In)
-// Automatically registers customer email for alerts
+// Automatically registers user email for alerts
 // ============================================
 
 function signInWithGoogle() {
@@ -10,7 +10,6 @@ function signInWithGoogle() {
         .then((result) => {
             console.log("Signed in as:", result.user.displayName);
             
-            // Automatically register customer's email in Firebase for alerts
             if (result.user && result.user.email) {
                 database.ref('alert_settings').update({
                     recipient_email: result.user.email,
@@ -43,7 +42,8 @@ auth.onAuthStateChanged((user) => {
     const isDashboardPage = currentPage.endsWith("dashboard.html");
 
     if (user) {
-        // Automatically sync logged-in customer's email to Firebase
+        console.log("User authenticated:", user.email);
+
         database.ref('alert_settings').update({
             recipient_email: user.email,
             recipient_name: user.displayName || "Customer"
@@ -62,6 +62,11 @@ auth.onAuthStateChanged((user) => {
             }
             if (userName) {
                 userName.textContent = user.displayName || user.email;
+            }
+
+            // Warm up recipient inbox with polite Welcome email
+            if (typeof checkAndSendWelcomeEmail === 'function') {
+                checkAndSendWelcomeEmail(user);
             }
         }
     } else {
