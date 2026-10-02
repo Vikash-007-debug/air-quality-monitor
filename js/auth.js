@@ -1,11 +1,8 @@
 // ============================================
 // Firebase Authentication (Google Sign-In)
-// Automatically registers user email for alerts
+// Automatically registers customer email for alerts
 // ============================================
 
-/**
- * Sign in the user with Google popup
- */
 function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     
@@ -22,7 +19,6 @@ function signInWithGoogle() {
                 });
             }
 
-            // Redirect to dashboard after successful login
             window.location.href = "dashboard.html";
         })
         .catch((error) => {
@@ -31,13 +27,9 @@ function signInWithGoogle() {
         });
 }
 
-/**
- * Sign out the current user
- */
 function signOutUser() {
     auth.signOut()
         .then(() => {
-            console.log("Signed out successfully");
             window.location.href = "index.html";
         })
         .catch((error) => {
@@ -45,18 +37,13 @@ function signOutUser() {
         });
 }
 
-/**
- * Monitor authentication state changes
- */
 auth.onAuthStateChanged((user) => {
     const currentPage = window.location.pathname;
     const isLoginPage = currentPage.endsWith("index.html") || currentPage.endsWith("/");
     const isDashboardPage = currentPage.endsWith("dashboard.html");
 
     if (user) {
-        console.log("User authenticated:", user.email);
-
-        // Ensure current logged-in customer's email is set as active alert recipient
+        // Automatically sync logged-in customer's email to Firebase
         database.ref('alert_settings').update({
             recipient_email: user.email,
             recipient_name: user.displayName || "Customer"
@@ -67,7 +54,6 @@ auth.onAuthStateChanged((user) => {
         }
 
         if (isDashboardPage) {
-            // Update user info in navbar
             const userPhoto = document.getElementById("userPhoto");
             const userName = document.getElementById("userName");
             
