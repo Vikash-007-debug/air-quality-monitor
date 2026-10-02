@@ -1,5 +1,6 @@
 /* ============================================
    AIR QUALITY MONITOR - Complete Stylesheet
+   Enhanced with Emergency Theme & Strobe Effects
    ============================================ */
 
 /* ---------- CSS Variables ---------- */
@@ -21,6 +22,13 @@
     --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
     --radius: 16px;
     --radius-sm: 10px;
+
+    /* Emergency Theme Palette */
+    --emergency-bg-1: #160408;
+    --emergency-bg-2: #2a0710;
+    --emergency-glow: #ff1e42;
+    --emergency-red: #ef4444;
+    --emergency-border: rgba(239, 68, 68, 0.7);
 }
 
 /* ---------- Reset & Base ---------- */
@@ -36,6 +44,136 @@ body {
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
+    transition: background 0.8s ease, box-shadow 0.8s ease;
+}
+
+/* ============================================
+   EMERGENCY GLOBAL THEME OVERRIDES
+   ============================================ */
+body.emergency-mode {
+    background: radial-gradient(circle at 50% 0%, #360711 0%, #1e050b 50%, #0d0205 100%) !important;
+    box-shadow: inset 0 0 120px rgba(255, 30, 66, 0.35);
+    animation: screenVignettePulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes screenVignettePulse {
+    0% {
+        box-shadow: inset 0 0 90px rgba(255, 30, 66, 0.25);
+    }
+    100% {
+        box-shadow: inset 0 0 150px rgba(255, 30, 66, 0.55);
+    }
+}
+
+body.emergency-mode .navbar {
+    background: rgba(30, 7, 13, 0.95) !important;
+    border-bottom: 1px solid var(--emergency-border) !important;
+    box-shadow: 0 4px 30px rgba(255, 30, 66, 0.35);
+}
+
+body.emergency-mode .nav-brand i {
+    color: var(--emergency-glow) !important;
+    animation: iconShake 0.6s ease infinite;
+}
+
+@keyframes iconShake {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-8deg); }
+    75% { transform: rotate(8deg); }
+}
+
+/* ============================================
+   TOP EMERGENCY STROBE BAR
+   ============================================ */
+.emergency-bar {
+    display: none;
+    background: linear-gradient(90deg, #b91c1c 0%, #ef4444 50%, #b91c1c 100%);
+    color: #ffffff;
+    padding: 12px 24px;
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.6);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    animation: barStrobe 1.5s ease-in-out infinite alternate;
+}
+
+body.emergency-mode .emergency-bar {
+    display: block;
+}
+
+@keyframes barStrobe {
+    0% { background: linear-gradient(90deg, #991b1b, #ef4444, #991b1b); }
+    100% { background: linear-gradient(90deg, #ef4444, #ff3b56, #ef4444); }
+}
+
+.emergency-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.emergency-siren {
+    font-size: 24px;
+    color: #fff;
+    animation: sirenFlash 0.5s infinite alternate;
+}
+
+@keyframes sirenFlash {
+    0% { transform: scale(1); filter: drop-shadow(0 0 2px #fff); }
+    100% { transform: scale(1.25); filter: drop-shadow(0 0 12px #fff); }
+}
+
+.emergency-text-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.emergency-text-group strong {
+    font-size: 14px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.emergency-text-group span {
+    font-size: 12px;
+    opacity: 0.92;
+}
+
+.emergency-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.emergency-btn {
+    border: none;
+    outline: none;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mute-btn {
+    background: #ffffff;
+    color: #b91c1c;
+}
+
+.mute-btn:hover {
+    background: #f1f5f9;
+    transform: scale(1.04);
 }
 
 /* ============================================
@@ -51,7 +189,6 @@ body {
     position: relative;
 }
 
-/* Floating Particles */
 .particles {
     position: fixed;
     top: 0;
@@ -76,7 +213,6 @@ body {
     50% { transform: translateY(-30px) scale(1.5); opacity: 0.8; }
 }
 
-/* Login Container */
 .login-container {
     z-index: 1;
     text-align: center;
@@ -131,7 +267,6 @@ body {
     margin-top: 32px;
 }
 
-/* Feature Tags */
 .features {
     display: flex;
     justify-content: center;
@@ -152,11 +287,6 @@ body {
     color: var(--accent-cyan);
 }
 
-.feature-item i {
-    font-size: 12px;
-}
-
-/* Google Sign-In Button */
 .google-btn {
     display: flex;
     align-items: center;
@@ -197,16 +327,9 @@ body {
     margin-top: 24px;
 }
 
-
 /* ============================================
-   DASHBOARD PAGE STYLES
+   NAVBAR & BUTTONS
    ============================================ */
-
-.dashboard-page {
-    background: var(--bg-primary);
-}
-
-/* ---------- Navbar ---------- */
 .navbar {
     display: flex;
     justify-content: space-between;
@@ -218,6 +341,7 @@ body {
     top: 0;
     z-index: 100;
     backdrop-filter: blur(10px);
+    transition: all 0.5s ease;
 }
 
 .nav-brand {
@@ -231,15 +355,51 @@ body {
 .nav-brand i {
     color: var(--accent-cyan);
     font-size: 22px;
+    transition: color 0.5s ease;
 }
 
 .nav-right {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 16px;
 }
 
-/* Connection Status Indicator */
+/* Simulation Test Button */
+.sim-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 20px;
+    background: rgba(249, 115, 22, 0.15);
+    border: 1px solid rgba(249, 115, 22, 0.35);
+    color: #fb923c;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.sim-btn:hover {
+    background: rgba(249, 115, 22, 0.3);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+}
+
+.sim-btn.active {
+    background: var(--emergency-red);
+    color: #fff;
+    border-color: #f87171;
+    animation: buttonPulse 1s infinite alternate;
+}
+
+@keyframes buttonPulse {
+    0% { box-shadow: 0 0 6px rgba(239, 68, 68, 0.6); }
+    100% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.9); }
+}
+
 .connection-status {
     display: flex;
     align-items: center;
@@ -277,7 +437,6 @@ body {
     color: var(--text-secondary);
 }
 
-/* User Info */
 .user-info {
     display: flex;
     align-items: center;
@@ -315,7 +474,9 @@ body {
     background: rgba(239, 68, 68, 0.2);
 }
 
-/* ---------- Dashboard Content ---------- */
+/* ============================================
+   DASHBOARD CONTENT
+   ============================================ */
 .dashboard-content {
     max-width: 1200px;
     margin: 0 auto;
@@ -335,6 +496,7 @@ body {
     font-size: 13px;
     margin-bottom: 28px;
     animation: fadeInUp 0.4s ease;
+    transition: all 0.4s ease;
 }
 
 .status-banner.success {
@@ -349,13 +511,16 @@ body {
     color: var(--accent-yellow);
 }
 
-.status-banner.danger {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: rgba(239, 68, 68, 0.2);
-    color: var(--accent-red);
+.status-banner.danger,
+body.emergency-mode .status-banner {
+    background: rgba(239, 68, 68, 0.15) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    color: #ff4d6d !important;
 }
 
-/* ---------- Gauge Cards ---------- */
+/* ============================================
+   GAUGE CARDS & SPEEDOMETERS
+   ============================================ */
 .gauges-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -364,27 +529,34 @@ body {
 }
 
 .gauge-card {
+    position: relative;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
     padding: 24px;
     text-align: center;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
     box-shadow: var(--shadow);
     animation: fadeInUp 0.5s ease;
+    overflow: hidden;
 }
 
-.gauge-card:hover {
-    background: var(--bg-card-hover);
-    transform: translateY(-4px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+body.emergency-mode .gauge-card {
+    background: #1c080e;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.gauge-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
 }
 
 .gauge-title {
     font-size: 15px;
     font-weight: 500;
     color: var(--text-secondary);
-    margin-bottom: 16px;
 }
 
 .gauge-title i {
@@ -394,6 +566,82 @@ body {
 #tempCard .gauge-title i { color: var(--accent-orange); }
 #humidCard .gauge-title i { color: var(--accent-blue); }
 #gasCard .gauge-title i { color: var(--accent-green); }
+
+/* Alert Badge in Card Header */
+.alert-indicator {
+    display: none;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+    letter-spacing: 0.5px;
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid var(--emergency-red);
+    color: #ff3355;
+}
+
+/* ============================================
+   EMERGENCY SPEEDOMETER BLINKING ANIMATION
+   ============================================ */
+.gauge-card.emergency-blink {
+    border-color: var(--emergency-red) !important;
+    animation: emergencyCardPulse 0.8s ease-in-out infinite alternate !important;
+    background: linear-gradient(180deg, #2a0912 0%, #170408 100%) !important;
+    z-index: 10;
+}
+
+@keyframes emergencyCardPulse {
+    0% {
+        border-color: #ef4444;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.5), inset 0 0 15px rgba(239, 68, 68, 0.2);
+        transform: translateY(-4px) scale(1.015);
+    }
+    100% {
+        border-color: #ff1e42;
+        box-shadow: 0 0 50px rgba(255, 30, 66, 0.95), inset 0 0 35px rgba(255, 30, 66, 0.45);
+        transform: translateY(-4px) scale(1.03);
+    }
+}
+
+.gauge-card.emergency-blink .alert-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    animation: alertBadgeBlink 0.6s infinite alternate;
+}
+
+@keyframes alertBadgeBlink {
+    0% { opacity: 0.5; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1.05); }
+}
+
+.gauge-card.emergency-blink .gauge-needle {
+    stroke: #ff1e42 !important;
+    filter: drop-shadow(0 0 10px #ff1e42);
+}
+
+.gauge-card.emergency-blink .gauge-fill {
+    stroke: #ff1e42 !important;
+    filter: drop-shadow(0 0 12px rgba(255, 30, 66, 0.8));
+}
+
+.gauge-card.emergency-blink .value-number {
+    color: #ff2a4b !important;
+    text-shadow: 0 0 20px rgba(255, 42, 75, 0.9);
+    animation: emergencyNumberStrobe 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes emergencyNumberStrobe {
+    0% { opacity: 0.8; transform: scale(1); }
+    100% { opacity: 1; transform: scale(1.06); }
+}
+
+.gauge-card.emergency-blink .gauge-status {
+    background: rgba(239, 68, 68, 0.25) !important;
+    color: #ff3355 !important;
+    border: 1px solid var(--emergency-red);
+    animation: alertBadgeBlink 0.6s infinite alternate;
+}
 
 /* ---------- SVG Gauge ---------- */
 .gauge-wrapper {
@@ -415,12 +663,16 @@ body {
     stroke-linecap: round;
 }
 
+body.emergency-mode .gauge-bg {
+    stroke: #45101a;
+}
+
 .gauge-fill {
     fill: none;
     stroke-width: 14;
     stroke-linecap: round;
-    stroke-dasharray: 251.33;  /* Total arc length for r=80, 180deg */
-    stroke-dashoffset: 251.33; /* Fully hidden initially */
+    stroke-dasharray: 251.33;
+    stroke-dashoffset: 251.33;
     transition: stroke-dashoffset 1s ease, stroke 0.5s ease;
 }
 
@@ -460,6 +712,7 @@ body {
     font-weight: 700;
     color: var(--text-primary);
     line-height: 1;
+    transition: color 0.4s ease;
 }
 
 .value-unit {
@@ -478,6 +731,7 @@ body {
     font-weight: 500;
     background: rgba(100, 116, 139, 0.2);
     color: var(--text-muted);
+    transition: all 0.3s ease;
 }
 
 .gauge-status.good {
@@ -500,7 +754,9 @@ body {
     color: var(--accent-red);
 }
 
-/* ---------- Info Cards Section ---------- */
+/* ============================================
+   INFO CARDS SECTION
+   ============================================ */
 .info-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -518,8 +774,9 @@ body {
     transition: all 0.3s ease;
 }
 
-.info-card:hover {
-    background: var(--bg-card-hover);
+body.emergency-mode .info-card {
+    background: #1c080e;
+    border-color: rgba(239, 68, 68, 0.25);
 }
 
 .info-icon {
@@ -558,7 +815,15 @@ body {
     color: var(--text-primary);
 }
 
-/* Battery Progress Bar */
+.email-value {
+    color: var(--accent-cyan);
+    font-weight: 600;
+}
+
+body.emergency-mode .email-value {
+    color: #ff4d6d;
+}
+
 .battery-bar-container {
     width: 100%;
     height: 6px;
@@ -575,11 +840,54 @@ body {
     transition: width 1s ease;
 }
 
+/* ============================================
+   FLOATING EMAIL DISPATCH TOAST
+   ============================================ */
+.email-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1e080f;
+    border: 1px solid var(--emergency-red);
+    color: #ffffff;
+    padding: 16px 20px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 10px 40px rgba(239, 68, 68, 0.5);
+    z-index: 2000;
+    transform: translateY(150%);
+    opacity: 0;
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s ease;
+}
+
+.email-toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.email-toast i {
+    font-size: 28px;
+    color: #ff3355;
+    animation: sirenFlash 0.6s infinite alternate;
+}
+
+.toast-text strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #ff4d6d;
+}
+
+.toast-text span {
+    font-size: 12px;
+    color: #cbd5e1;
+}
 
 /* ============================================
    RESPONSIVE DESIGN
    ============================================ */
-
 @media (max-width: 768px) {
     .navbar {
         padding: 12px 16px;
@@ -603,6 +911,11 @@ body {
         grid-template-columns: 1fr;
     }
 
+    .emergency-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
     .login-card {
         padding: 36px 24px;
     }
@@ -616,6 +929,10 @@ body {
 @media (max-width: 480px) {
     .nav-brand span {
         font-size: 14px;
+    }
+
+    .sim-btn span {
+        display: none;
     }
 
     .connection-status {
