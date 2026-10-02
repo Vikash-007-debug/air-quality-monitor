@@ -1,5 +1,5 @@
 // ============================================
-// Dashboard - Real-time Gauge Updates
+// Dashboard - Real-time Gauge Updates & Emergency System
 // ============================================
 
 // Total SVG arc length for the semicircle gauges (r=80, 180 degrees)
@@ -9,6 +9,35 @@ const ARC_LENGTH = 251.33;
 const TEMP_MIN = 0, TEMP_MAX = 50;       // DHT11 range: 0-50°C
 const HUMID_MIN = 0, HUMID_MAX = 100;    // DHT11 range: 0-100%
 const GAS_MIN = 0, GAS_MAX = 4095;      // MQ-135 ADC range: 0-4095 (12-bit ESP32)
+
+// ============================================
+// EMERGENCY THRESHOLDS
+// ============================================
+const EMERGENCY_THRESHOLDS = {
+    gas: 1800,        // MQ-135 raw reading above 1800 is considered hazardous smoke/gas
+    tempHigh: 40.0,   // High temperature alert (°C)
+    humidHigh: 85.0   // Extreme humidity level (%)
+};
+
+// Emergency System State
+let isEmergencyActive = false;
+let isAudioMuted = false;
+let audioContext = null;
+let sirenInterval = null;
+let lastEmailSentTimestamp = 0;
+const EMAIL_COOLDOWN_MS = 5 * 60 * 1000; // 5-minute cooldown between emergency emails
+let isSimulationActive = false;
+
+// Initialize EmailJS (Optional: user can insert their free public key in firebase-config.js or here)
+const EMAILJS_CONFIG = {
+    serviceId: "service_airquality",
+    templateId: "template_emergency",
+    publicKey: "YOUR_EMAILJS_PUBLIC_KEY" // Optional: ready for EmailJS integration
+};
+
+if (window.emailjs && EMAILJS_CONFIG.publicKey !== "YOUR_EMAILJS_PUBLIC_KEY") {
+    emailjs.init({ publicKey: EMAILJS_CONFIG.publicKey });
+}
 
 /**
  * Update a speedometer gauge with a new value
@@ -44,9 +73,7 @@ function updateGauge(id, value, min, max) {
     // Update the numeric display
     const valueEl = document.getElementById(id + 'Value');
     if (valueEl) {
-        if (id === 'temp') {
-            valueEl.textContent = value.toFixed(1);
-        } else if (id === 'humid') {
+        if (id === 'temp' || id === 'humid') {
             valueEl.textContent = value.toFixed(1);
         } else {
             valueEl.textContent = Math.round(value);
@@ -58,7 +85,7 @@ function updateGauge(id, value, min, max) {
 }
 
 /**
- * Get dynamic gauge color based on type and percentage
+ * Dynamic gauge color based on type and percentage
  */
 function getGaugeColor(id, percent) {
     if (id === 'temp') {
@@ -66,7 +93,7 @@ function getGaugeColor(id, percent) {
         if (percent < 0.5) return '#22c55e';        // Comfortable - Green
         if (percent < 0.7) return '#eab308';        // Warm - Yellow
         if (percent < 0.85) return '#f97316';       // Hot - Orange
-        return '#ef4444';                            // Very Hot - Red
+        return '#ef4444';                            // Danger - Red
     }
     
     if (id === 'humid') {
@@ -74,13 +101,13 @@ function getGaugeColor(id, percent) {
         if (percent < 0.4) return '#22c55e';        // Comfortable - Green
         if (percent < 0.7) return '#3b82f6';        // Normal - Blue
         if (percent < 0.85) return '#eab308';       // Humid - Yellow
-        return '#ef4444';                            // Very Humid - Red
+        return '#ef4444';                            // High - Red
     }
     
     if (id === 'gas') {
         if (percent < 0.25) return '#22c55e';       // Clean Air - Green
-        if (percent < 0.5) return '#eab308';        // Moderate - Yellow
-        if (percent < 0.75) return '#f97316';       // Poor - Orange
+        if (percent < 0.45) return '#eab308';       // Moderate - Yellow
+        if (percent < 0.65) return '#f97316';       // Poor - Orange
         return '#ef4444';                            // Hazardous - Red
     }
     
@@ -100,8 +127,8 @@ function updateStatus(id, percent) {
         if (percent < 0.3) { text = 'Cold'; cssClass = 'moderate'; }
         else if (percent < 0.5) { text = 'Comfortable'; cssClass = 'good'; }
         else if (percent < 0.7) { text = 'Warm'; cssClass = 'moderate'; }
-        else if (percent < 0.85) { text = 'Hot'; cssClass = 'poor'; }
-        else { text = 'Very Hot!'; cssClass = 'danger'; }
+        else if (percent < 0.8) { text = 'Hot'; cssClass = 'poor'; }
+        else { text = 'Extreme Heat!'; cssClass = 'danger'; }
     }
     
     if (id === 'humid') {
@@ -109,14 +136,14 @@ function updateStatus(id, percent) {
         else if (percent < 0.4) { text = 'Comfortable'; cssClass = 'good'; }
         else if (percent < 0.7) { text = 'Normal'; cssClass = 'good'; }
         else if (percent < 0.85) { text = 'Humid'; cssClass = 'moderate'; }
-        else { text = 'Very Humid!'; cssClass = 'danger'; }
+        else { text = 'Excessive Humidity!'; cssClass = 'danger'; }
     }
     
     if (id === 'gas') {
         if (percent < 0.25) { text = 'Clean Air'; cssClass = 'good'; }
-        else if (percent < 0.5) { text = 'Moderate'; cssClass = 'moderate'; }
-        else if (percent < 0.75) { text = 'Poor Air'; cssClass = 'poor'; }
-        else { text = 'Hazardous!'; cssClass = 'danger'; }
+        else if (percent < 0.45) { text = 'Moderate'; cssClass = 'moderate'; }
+        else if (percent < 0.65) { text = 'Poor Air Quality'; cssClass = 'poor'; }
+        else { text = 'Hazardous Gas Detected!'; cssClass = 'danger'; }
     }
     
     statusEl.textContent = text;
@@ -124,7 +151,260 @@ function updateStatus(id, percent) {
 }
 
 /**
- * Update the battery level display
+ * ============================================
+ * EMERGENCY SYSTEM LOGIC
+ * ============================================
+ */
+function evaluateEmergencyConditions(temp, humid, gas) {
+    if (isSimulationActive) return; // Keep simulation overrides if user is testing
+
+    const gasAbnormal = gas >= EMERGENCY_THRESHOLDS.gas;
+    const tempAbnormal = temp >= EMERGENCY_THRESHOLDS.tempHigh;
+    const humidAbnormal = humid >= EMERGENCY_THRESHOLDS.humidHigh;
+
+    const isEmergency = gasAbnormal || tempAbnormal || humidAbnormal;
+
+    applyEmergencyState({
+        active: isEmergency,
+        gasAbnormal: gasAbnormal,
+        tempAbnormal: tempAbnormal,
+        humidAbnormal: humidAbnormal,
+        tempVal: temp,
+        humidVal: humid,
+        gasVal: gas
+    });
+}
+
+function applyEmergencyState(state) {
+    const body = document.getElementById('dashboardBody');
+    const gasCard = document.getElementById('gasCard');
+    const tempCard = document.getElementById('tempCard');
+    const humidCard = document.getElementById('humidCard');
+    const banner = document.getElementById('statusBanner');
+    const bannerMsg = document.getElementById('statusMessage');
+
+    if (state.active) {
+        isEmergencyActive = true;
+        body.classList.add('emergency-mode');
+
+        // Blink the specific sensor cards that breached the threshold
+        if (state.gasAbnormal) {
+            gasCard.classList.add('emergency-blink');
+        } else {
+            gasCard.classList.remove('emergency-blink');
+        }
+
+        if (state.tempAbnormal) {
+            tempCard.classList.add('emergency-blink');
+        } else {
+            tempCard.classList.remove('emergency-blink');
+        }
+
+        if (state.humidAbnormal) {
+            humidCard.classList.add('emergency-blink');
+        } else {
+            humidCard.classList.remove('emergency-blink');
+        }
+
+        // Build emergency message
+        const reasons = [];
+        if (state.gasAbnormal) reasons.push(`Hazardous Gas (${Math.round(state.gasVal)} PPM)`);
+        if (state.tempAbnormal) reasons.push(`Extreme Temp (${state.tempVal.toFixed(1)}°C)`);
+        if (state.humidAbnormal) reasons.push(`Extreme Humidity (${state.humidVal.toFixed(1)}%)`);
+
+        banner.className = 'status-banner danger';
+        bannerMsg.innerHTML = `<strong>⚠️ EMERGENCY ALERT:</strong> ${reasons.join(' & ')} detected! Notification dispatched.`;
+
+        // Start audible alert (if not muted)
+        startAudioAlert();
+
+        // Dispatch Email Notification to logged-in user
+        triggerEmergencyEmailNotification(reasons.join(', '));
+
+    } else {
+        isEmergencyActive = false;
+        body.classList.remove('emergency-mode');
+        gasCard.classList.remove('emergency-blink');
+        tempCard.classList.remove('emergency-blink');
+        humidCard.classList.remove('emergency-blink');
+
+        stopAudioAlert();
+
+        banner.className = 'status-banner success';
+        bannerMsg.textContent = 'ESP32 is connected and sensor readings are safe.';
+    }
+}
+
+/**
+ * Toggle Test Emergency Simulation
+ */
+function toggleEmergencySimulation() {
+    const simBtn = document.getElementById('simEmergencyBtn');
+    isSimulationActive = !isSimulationActive;
+
+    if (isSimulationActive) {
+        simBtn.classList.add('active');
+        simBtn.innerHTML = '<i class="fas fa-stop"></i> <span>Stop Simulation</span>';
+
+        // Simulate dangerous gas level (2450 PPM)
+        updateGauge('gas', 2450, GAS_MIN, GAS_MAX);
+        updateGauge('temp', 42.5, TEMP_MIN, TEMP_MAX);
+        updateGauge('humid', 60.0, HUMID_MIN, HUMID_MAX);
+
+        applyEmergencyState({
+            active: true,
+            gasAbnormal: true,
+            tempAbnormal: true,
+            humidAbnormal: false,
+            gasVal: 2450,
+            tempVal: 42.5,
+            humidVal: 60.0
+        });
+
+    } else {
+        simBtn.classList.remove('active');
+        simBtn.innerHTML = '<i class="fas fa-bolt"></i> <span>Test Emergency UI</span>';
+
+        // Reset to normal values
+        updateGauge('gas', 420, GAS_MIN, GAS_MAX);
+        updateGauge('temp', 27.2, TEMP_MIN, TEMP_MAX);
+        updateGauge('humid', 54.0, HUMID_MIN, HUMID_MAX);
+
+        applyEmergencyState({
+            active: false,
+            gasAbnormal: false,
+            tempAbnormal: false,
+            humidAbnormal: false,
+            gasVal: 420,
+            tempVal: 27.2,
+            humidVal: 54.0
+        });
+    }
+}
+
+/**
+ * Web Audio API Emergency Siren/Beep Tone
+ */
+function startAudioAlert() {
+    if (isAudioMuted || sirenInterval) return;
+
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!audioContext) audioContext = new AudioContext();
+
+        function playBeep() {
+            if (isAudioMuted || !isEmergencyActive) return;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(880, audioContext.currentTime); // High pitch A5
+            osc.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.3); // Pitch drop
+
+            gain.gain.setValueAtTime(0.15, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.3);
+        }
+
+        playBeep();
+        sirenInterval = setInterval(playBeep, 1200);
+    } catch (e) {
+        console.warn("Web Audio not allowed without user interaction yet:", e);
+    }
+}
+
+function stopAudioAlert() {
+    if (sirenInterval) {
+        clearInterval(sirenInterval);
+        sirenInterval = null;
+    }
+}
+
+function toggleMuteAudio() {
+    isAudioMuted = !isAudioMuted;
+    const muteIcon = document.getElementById('muteIcon');
+    const muteText = document.getElementById('muteText');
+
+    if (isAudioMuted) {
+        stopAudioAlert();
+        muteIcon.className = 'fas fa-volume-xmark';
+        muteText.textContent = 'Unmute';
+    } else {
+        muteIcon.className = 'fas fa-volume-high';
+        muteText.textContent = 'Mute';
+        if (isEmergencyActive) startAudioAlert();
+    }
+}
+
+/**
+ * ============================================
+ * EMAIL NOTIFICATION TO LOGGED-IN GMAIL
+ * ============================================
+ */
+function triggerEmergencyEmailNotification(incidentDetails) {
+    const user = auth.currentUser;
+    const targetEmail = user ? user.email : "Logged-in User";
+    const userName = user ? (user.displayName || "User") : "Air Quality User";
+
+    const now = Date.now();
+    // Check cooldown to avoid spamming user inbox every few seconds
+    if (now - lastEmailSentTimestamp < EMAIL_COOLDOWN_MS) {
+        const remainingSec = Math.round((EMAIL_COOLDOWN_MS - (now - lastEmailSentTimestamp)) / 1000);
+        console.log(`[Email Cooldown Active] Next email alert allowed in ${remainingSec}s`);
+        return;
+    }
+
+    lastEmailSentTimestamp = now;
+
+    // Update dispatch status in info card
+    const statusEl = document.getElementById('emailDispatchStatus');
+    if (statusEl) {
+        statusEl.textContent = `Dispatched to ${targetEmail}`;
+    }
+
+    // Show floating toast alert on screen
+    showEmailToast(targetEmail);
+
+    console.log(`🚨 [EMERGENCY EMAIL DISPATCH] Sending alert to: ${targetEmail}`);
+    console.log(`Reason: ${incidentDetails}`);
+
+    // If EmailJS is integrated with credentials
+    if (window.emailjs && EMAILJS_CONFIG.publicKey !== "YOUR_EMAILJS_PUBLIC_KEY") {
+        emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, {
+            to_email: targetEmail,
+            to_name: userName,
+            alert_type: incidentDetails,
+            timestamp: new Date().toLocaleString()
+        }).then(
+            (response) => {
+                console.log("EmailJS Sent Successfully!", response.status, response.text);
+            },
+            (error) => {
+                console.error("EmailJS Error:", error);
+            }
+        );
+    }
+}
+
+function showEmailToast(recipientEmail) {
+    const toast = document.getElementById('emailToast');
+    const emailAddr = document.getElementById('emailToastAddress');
+    if (toast && emailAddr) {
+        emailAddr.textContent = `Alert dispatched to ${recipientEmail}`;
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 6000);
+    }
+}
+
+/**
+ * Update Battery Level
  */
 function updateBattery(percent) {
     percent = Math.max(0, Math.min(100, percent));
@@ -135,8 +415,6 @@ function updateBattery(percent) {
     
     if (bar) {
         bar.style.width = percent + '%';
-        
-        // Change color based on battery level
         if (percent > 60) {
             bar.style.background = 'linear-gradient(90deg, #22c55e, #06b6d4)';
         } else if (percent > 30) {
@@ -146,12 +424,9 @@ function updateBattery(percent) {
         }
     }
     
-    if (valueEl) {
-        valueEl.textContent = Math.round(percent) + '%';
-    }
+    if (valueEl) valueEl.textContent = Math.round(percent) + '%';
     
     if (iconEl) {
-        // Change battery icon based on level
         iconEl.className = 'fas ';
         if (percent > 75) iconEl.className += 'fa-battery-full';
         else if (percent > 50) iconEl.className += 'fa-battery-three-quarters';
@@ -161,9 +436,6 @@ function updateBattery(percent) {
     }
 }
 
-/**
- * Update connection status indicator
- */
 function setConnectionStatus(isOnline) {
     const dot = document.querySelector('.status-dot');
     const text = document.querySelector('.status-text');
@@ -173,19 +445,20 @@ function setConnectionStatus(isOnline) {
     if (isOnline) {
         dot.className = 'status-dot online';
         text.textContent = 'Live';
-        banner.className = 'status-banner success';
-        bannerMsg.textContent = 'ESP32 is connected and sending live sensor data.';
+        if (!isEmergencyActive) {
+            banner.className = 'status-banner success';
+            bannerMsg.textContent = 'ESP32 is connected and sending live sensor data.';
+        }
     } else {
         dot.className = 'status-dot offline';
         text.textContent = 'Disconnected';
-        banner.className = 'status-banner warning';
-        bannerMsg.textContent = 'Waiting for ESP32 sensor data...';
+        if (!isEmergencyActive) {
+            banner.className = 'status-banner warning';
+            bannerMsg.textContent = 'Waiting for ESP32 sensor data...';
+        }
     }
 }
 
-/**
- * Update the "Last Updated" timestamp
- */
 function updateTimestamp() {
     const el = document.getElementById('lastUpdated');
     if (el) {
@@ -202,21 +475,9 @@ function updateTimestamp() {
     }
 }
 
-
 // ============================================
 // Firebase Realtime Database Listener
 // ============================================
-
-// Listen for real-time sensor data from ESP32
-// Expected Firebase path: /sensor_data
-// Expected data format:
-// {
-//   temperature: 28.5,
-//   humidity: 65.2,
-//   gas: 312,
-//   battery: 78.5
-// }
-
 const sensorRef = database.ref('sensor_data');
 let hasReceivedData = false;
 
@@ -227,20 +488,17 @@ sensorRef.on('value', (snapshot) => {
         hasReceivedData = true;
         setConnectionStatus(true);
         
-        // Update Temperature Gauge
-        if (data.temperature !== undefined) {
-            updateGauge('temp', data.temperature, TEMP_MIN, TEMP_MAX);
-        }
-        
-        // Update Humidity Gauge
-        if (data.humidity !== undefined) {
-            updateGauge('humid', data.humidity, HUMID_MIN, HUMID_MAX);
-        }
-        
-        // Update Gas / Air Quality Gauge
-        if (data.gas !== undefined) {
-            updateGauge('gas', data.gas, GAS_MIN, GAS_MAX);
-        }
+        const temp = data.temperature !== undefined ? data.temperature : 0;
+        const humid = data.humidity !== undefined ? data.humidity : 0;
+        const gas = data.gas !== undefined ? data.gas : 0;
+
+        // Update gauges
+        updateGauge('temp', temp, TEMP_MIN, TEMP_MAX);
+        updateGauge('humid', humid, HUMID_MIN, HUMID_MAX);
+        updateGauge('gas', gas, GAS_MIN, GAS_MAX);
+
+        // Evaluate whether any sensor is in the Emergency Danger Zone
+        evaluateEmergencyConditions(temp, humid, gas);
         
         // Update Battery Level
         if (data.battery !== undefined) {
@@ -258,7 +516,7 @@ connectedRef.on('value', (snap) => {
     if (snap.val() === true) {
         console.log("Connected to Firebase Realtime Database");
     } else {
-        if (hasReceivedData) {
+        if (hasReceivedData && !isSimulationActive) {
             setConnectionStatus(false);
         }
     }
