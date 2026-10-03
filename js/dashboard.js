@@ -24,9 +24,10 @@ const EMERGENCY_THRESHOLDS = {
 // Emergency & Alert State Variables
 let isEmergencyActive = false;
 let isAudioMuted = false;
-let audioContext = null;
-let sirenInterval = null;
-let alertMasterGain = null;
+let alertAudio = null;
+let fallbackAudioContext = null;
+let fallbackSirenInterval = null;
+let fallbackMasterGain = null;
 let lastEmailSentTimestamp = 0;
 const EMAIL_COOLDOWN_MS = 60 * 1000; // 60-second cooldown between auto-emails
 let isSimulationActive = false;
@@ -539,83 +540,159 @@ function applyEmergencyState(state) {
 }
 
 // ==========================================================================
-// WEB AUDIO API EMERGENCY SIREN & MUTE TOGGLE
+// EMERGENCY AUDIO ALARM & MUTE TOGGLE (Uses uploaded alert.mp3)
 // ==========================================================================
+function getAlertAudio() {
+    if (!alertAudio) {
+        const domAudio = document.getElementById('emergencyAudio');
+        if (domAudio) {
+            alertAudio = domAudio;
+        } else {
+            alertAudio = new Audio('audio/alert.mp3');
+        }
+        alertAudio.loop = true;
+    }
+    return alertAudio;
+}
+
 function startAudioAlert() {
-    if (isAudioMuted || sirenInterval) return;
+    if (isAudioMuted) return;
 
     try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!audioContext) audioContext = new AudioContext();
-
-        if (audioContext.state === 'suspended') {
-            audioContext.resume();
-        }
-
-        if (!alertMasterGain) {
-            alertMasterGain = audioContext.createGain();
-            alertMasterGain.connect(audioContext.destination);
-        }
-        alertMasterGain.gain.setValueAtTime(1.0, audioContext.currentTime);
-
-        function playBeep() {
-            if (isAudioMuted || !isEmergencyActive) return;
-            if (audioContext && audioContext.state === 'suspended') {
-                audioContext.resume().catch(() => {});
+        const audio = getAlertAudio();
+        if (audio) {
+            audio.loop = true;
+            audio.muted = false;
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    stopFallbackWebAudioSiren();
+                }).catch(err => {
+                    console.warn("Audio autoplay blocked by browser policy, using fallback siren:", err);
+                    playFallbackWebAudioSiren();
+                });
             }
-            const osc = audioContext.createOscillator();
-            const gain = audioContext.createGain();
-
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(880, audioContext.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.35);
-
-            gain.gain.setValueAtTime(0.18, audioContext.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.35);
-
-            osc.connect(gain);
-            gain.connect(alertMasterGain);
-
-            osc.start();
-            osc.stop(audioContext.currentTime + 0.35);
+        } else {
+            playFallbackWebAudioSiren();
         }
-
-        playBeep();
-        sirenInterval = setInterval(playBeep, 1200);
     } catch (e) {
-        console.warn("Audio Context init note:", e);
+        console.warn("Audio alert start warning:", e);
+        playFallbackWebAudioSiren();
     }
 }
 
 function stopAudioAlert() {
-    if (sirenInterval) {
-        clearInterval(sirenInterval);
-        sirenInterval = null;
-    }
-    if (alertMasterGain && audioContext) {
-        try {
-            alertMasterGain.gain.setValueAtTime(0, audioContext.currentTime);
-        } catch (e) {
-            // ignore
+    try {
+        const audio = getAlertAudio();
+        if (audio) {
+            audio.pause();
+            audio.currentTime = 0; // Rewind cleanly to beginning
         }
+    } catch (e) {
+        // ignore
     }
+    stopFallbackWebAudioSiren();
 }
 
 function toggleMuteAudio() {
     isAudioMuted = !isAudioMuted;
     const muteIcon = document.getElementById('muteIcon');
     const muteText = document.getElementById('muteText');
+    const audio = getAlertAudio();
+
+    if (audio) {
+        audio.muted = isAudioMuted;
+    }
 
     if (isAudioMuted) {
-        stopAudioAlert();
+        if (audio) {
+            audio.pause();
+        }
+        stopFallbackWebAudioSiren();
         if (muteIcon) muteIcon.className = 'fas fa-volume-xmark';
         if (muteText) muteText.textContent = 'Unmute';
     } else {
         if (muteIcon) muteIcon.className = 'fas fa-volume-high';
         if (muteText) muteText.textContent = 'Mute';
-        if (isEmergencyActive) startAudioAlert();
+        if (isEmergencyActive) {
+            startAudioAlert();
+        }
     }
 }
+
+function playFallbackWebAudioSiren() {
+    if (isAudioMuted || fallbackSirenInterval) return;
+
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!fallbackAudioContext) fallbackAudioContext = new AudioContext();
+
+        if (fallbackAudioContext.state === 'suspended') {
+            fallbackAudioContext.resume().catch(() => {});
+        }
+
+        if (!fallbackMasterGain) {
+            fallbackMasterGain = fallbackAudioContext.createGain();
+            fallbackMasterGain.connect(fallbackAudioContext.destination);
+        }
+        fallbackMasterGain.gain.setValueAtTime(0.2, fallbackAudioContext.currentTime);
+
+        function playBeep() {
+            if (isAudioMuted || !isEmergencyActive) return;
+            if (fallbackAudioContext && fallbackAudioContext.state === 'suspended') {
+                fallbackAudioContext.resume().catch(() => {});
+            }
+            const osc = fallbackAudioContext.createOscillator();
+            const gain = fallbackAudioContext.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(880, fallbackAudioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(440, fallbackAudioContext.currentTime + 0.35);
+
+            gain.gain.setValueAtTime(0.18, fallbackAudioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, fallbackAudioContext.currentTime + 0.35);
+
+            osc.connect(gain);
+            gain.connect(fallbackMasterGain);
+
+            osc.start();
+            osc.stop(fallbackAudioContext.currentTime + 0.35);
+        }
+
+        playBeep();
+        fallbackSirenInterval = setInterval(playBeep, 1200);
+    } catch (e) {
+        console.warn("Audio Context init note:", e);
+    }
+}
+
+function stopFallbackWebAudioSiren() {
+    if (fallbackSirenInterval) {
+        clearInterval(fallbackSirenInterval);
+        fallbackSirenInterval = null;
+    }
+    if (fallbackMasterGain && fallbackAudioContext) {
+        try {
+            fallbackMasterGain.gain.setValueAtTime(0, fallbackAudioContext.currentTime);
+        } catch (e) {
+            // ignore
+        }
+    }
+}
+
+// User-interaction listener to unlock audio element immediately
+function unlockEmergencyAudio() {
+    const audio = getAlertAudio();
+    if (audio) {
+        audio.load();
+    }
+    window.removeEventListener('click', unlockEmergencyAudio);
+    window.removeEventListener('keydown', unlockEmergencyAudio);
+    window.removeEventListener('touchstart', unlockEmergencyAudio);
+}
+window.addEventListener('click', unlockEmergencyAudio, { once: true });
+window.addEventListener('keydown', unlockEmergencyAudio, { once: true });
+window.addEventListener('touchstart', unlockEmergencyAudio, { once: true });
 
 // ==========================================================================
 // SIMULATION TOGGLE (Allows User to Preview Black & Red Emergency Mode)
