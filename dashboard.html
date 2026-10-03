@@ -178,7 +178,7 @@
                             <!-- Perfectly Centered Digital Readout Display Plate -->
                             <g class="gauge-readout-plate">
                                 <rect x="48" y="116" width="104" height="36" rx="8" class="gauge-display-plate" />
-                                <text x="96" y="141" class="gauge-display-val font-mono" id="tempValue" text-anchor="end">--</text>
+                                <text x="96" y="141" class="gauge-display-val font-mono" id="tempValue" text-anchor="end">0.0</text>
                                 <text x="100" y="141" class="gauge-display-unit" text-anchor="start">°C</text>
                             </g>
                         </svg>
@@ -186,7 +186,7 @@
 
                     <!-- Status Evaluation Badge -->
                     <div class="gauge-footer">
-                        <span class="gauge-status" id="tempStatus">Awaiting Data</span>
+                        <span class="gauge-status" id="tempStatus">Offline (0.0°C)</span>
                     </div>
                 </div>
 
@@ -238,14 +238,14 @@
                             <!-- Perfectly Centered Digital Readout Display Plate -->
                             <g class="gauge-readout-plate">
                                 <rect x="48" y="116" width="104" height="36" rx="8" class="gauge-display-plate" />
-                                <text x="96" y="141" class="gauge-display-val font-mono" id="humidValue" text-anchor="end">--</text>
+                                <text x="96" y="141" class="gauge-display-val font-mono" id="humidValue" text-anchor="end">0.0</text>
                                 <text x="100" y="141" class="gauge-display-unit" text-anchor="start">%</text>
                             </g>
                         </svg>
                     </div>
 
                     <div class="gauge-footer">
-                        <span class="gauge-status" id="humidStatus">Awaiting Data</span>
+                        <span class="gauge-status" id="humidStatus">Offline (0.0%)</span>
                     </div>
                 </div>
 
@@ -297,14 +297,14 @@
                             <!-- Perfectly Centered Digital Readout Display Plate -->
                             <g class="gauge-readout-plate">
                                 <rect x="42" y="116" width="116" height="36" rx="8" class="gauge-display-plate" />
-                                <text x="94" y="141" class="gauge-display-val font-mono" id="gasValue" text-anchor="end">--</text>
+                                <text x="94" y="141" class="gauge-display-val font-mono" id="gasValue" text-anchor="end">0</text>
                                 <text x="98" y="141" class="gauge-display-unit" text-anchor="start">PPM</text>
                             </g>
                         </svg>
                     </div>
 
                     <div class="gauge-footer">
-                        <span class="gauge-status" id="gasStatus">Awaiting Data</span>
+                        <span class="gauge-status" id="gasStatus">Offline (0 PPM)</span>
                     </div>
                 </div>
 
@@ -315,7 +315,7 @@
                 <!-- Battery Level Card -->
                 <div class="info-card">
                     <div class="info-icon battery-icon">
-                        <i class="fas fa-battery-three-quarters" id="batteryIcon"></i>
+                        <i class="fas fa-battery-empty" id="batteryIcon"></i>
                     </div>
                     <div class="info-details">
                         <span class="info-label">Battery Level (18650 Li-ion)</span>
@@ -323,8 +323,8 @@
                             <div class="battery-bar" id="batteryBar" style="width: 0%"></div>
                         </div>
                         <div class="info-flex-row">
-                            <span class="info-value font-mono" id="batteryValue">--%</span>
-                            <span class="info-subtext font-mono" id="batteryVoltage">3.70V</span>
+                            <span class="info-value font-mono" id="batteryValue">0%</span>
+                            <span class="info-subtext font-mono" id="batteryVoltage">0.00V</span>
                         </div>
                     </div>
                 </div>

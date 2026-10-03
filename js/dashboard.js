@@ -221,6 +221,102 @@ function updateBattery(percent) {
     }
 }
 
+/**
+ * Reset all speedometer gauges, values boxes, and status badges to ZERO when ESP32 is offline
+ */
+function resetGaugesToZero() {
+    // 1. Reset Needle Positions to 0 (-90deg calibration)
+    const tempNeedle = document.getElementById('tempNeedle');
+    const humidNeedle = document.getElementById('humidNeedle');
+    const gasNeedle = document.getElementById('gasNeedle');
+    if (tempNeedle) tempNeedle.style.transform = 'rotate(-90deg)';
+    if (humidNeedle) humidNeedle.style.transform = 'rotate(-90deg)';
+    if (gasNeedle) gasNeedle.style.transform = 'rotate(-90deg)';
+
+    // 2. Reset Filled Arcs to 0 (strokeDashoffset = ARC_LENGTH means empty arc)
+    const tempFill = document.getElementById('tempFill');
+    const humidFill = document.getElementById('humidFill');
+    const gasFill = document.getElementById('gasFill');
+    if (tempFill) {
+        tempFill.style.strokeDashoffset = ARC_LENGTH;
+        tempFill.style.stroke = '#475569';
+    }
+    if (humidFill) {
+        humidFill.style.strokeDashoffset = ARC_LENGTH;
+        humidFill.style.stroke = '#475569';
+    }
+    if (gasFill) {
+        gasFill.style.strokeDashoffset = ARC_LENGTH;
+        gasFill.style.stroke = '#475569';
+    }
+
+    // 3. Reset Speedometer Values Box to ZERO
+    const tempVal = document.getElementById('tempValue');
+    const humidVal = document.getElementById('humidValue');
+    const gasVal = document.getElementById('gasValue');
+    if (tempVal) tempVal.textContent = '0.0';
+    if (humidVal) humidVal.textContent = '0.0';
+    if (gasVal) gasVal.textContent = '0';
+
+    // 4. Update Status Badges to indicate offline at zero
+    const tempStatus = document.getElementById('tempStatus');
+    const humidStatus = document.getElementById('humidStatus');
+    const gasStatus = document.getElementById('gasStatus');
+    if (tempStatus) {
+        tempStatus.textContent = 'Offline (0.0°C)';
+        tempStatus.className = 'gauge-status';
+    }
+    if (humidStatus) {
+        humidStatus.textContent = 'Offline (0.0%)';
+        humidStatus.className = 'gauge-status';
+    }
+    if (gasStatus) {
+        gasStatus.textContent = 'Offline (0 PPM)';
+        gasStatus.className = 'gauge-status';
+    }
+
+    // 5. Reset Alert Indicators and Hazard Highlights
+    const tempAlert = document.getElementById('tempAlertIndicator');
+    const humidAlert = document.getElementById('humidAlertIndicator');
+    const gasAlert = document.getElementById('gasAlertIndicator');
+    if (tempAlert) tempAlert.classList.remove('active');
+    if (humidAlert) humidAlert.classList.remove('active');
+    if (gasAlert) gasAlert.classList.remove('active');
+
+    ['tempCard', 'humidCard', 'gasCard'].forEach(cardId => {
+        const card = document.getElementById(cardId);
+        if (card) {
+            card.classList.remove('emergency-blink', 'emergency-card');
+        }
+    });
+
+    // 6. Reset Emergency State if active
+    if (isEmergencyActive) {
+        resetEmergencyState();
+    }
+
+    // 7. Reset Battery Diagnostics to 0
+    const batteryVal = document.getElementById('batteryValue');
+    const batteryVolt = document.getElementById('batteryVoltage');
+    const batteryBar = document.getElementById('batteryBar');
+    const batteryIcon = document.getElementById('batteryIcon');
+    if (batteryVal) batteryVal.textContent = '0%';
+    if (batteryVolt) batteryVolt.textContent = '0.00V';
+    if (batteryBar) {
+        batteryBar.style.width = '0%';
+        batteryBar.style.background = '#475569';
+    }
+    if (batteryIcon) batteryIcon.className = 'fas fa-battery-empty';
+
+    // 8. Reset Live Stat Cards (Tab 2) current values to zero
+    const statGas = document.getElementById('statCurrentGas');
+    const statTemp = document.getElementById('statCurrentTemp');
+    const statHumid = document.getElementById('statCurrentHumid');
+    if (statGas) statGas.innerHTML = `0 <small>PPM</small>`;
+    if (statTemp) statTemp.innerHTML = `0.0 <small>°C</small>`;
+    if (statHumid) statHumid.innerHTML = `0.0 <small>%</small>`;
+}
+
 function setConnectionStatus(isOnline, customMsg) {
     const dot = document.getElementById('mainStatusDot');
     const text = document.getElementById('mainStatusText');
@@ -261,7 +357,7 @@ function setConnectionStatus(isOnline, customMsg) {
                 banner.className = 'status-banner warning';
                 if (bannerHeadline) bannerHeadline.textContent = 'Device Offline';
                 if (bannerIcon) bannerIcon.className = 'fas fa-power-off';
-                bannerMsg.textContent = customMsg || 'ESP32 is powered off or disconnected. Showing last recorded state.';
+                bannerMsg.textContent = customMsg || 'ESP32 is powered off or disconnected. Gauges zeroed until device reconnects.';
             }
             if (instDot && instTitle && instDesc) {
                 instDot.className = 'status-dot offline';
@@ -481,20 +577,12 @@ function toggleEmergencySimulation() {
             simBtn.innerHTML = '<i class="fas fa-bolt"></i> <span>Test Alert</span>';
         }
 
-        // Return to baseline normal values
-        updateGauge('gas', 420, GAS_MIN, GAS_MAX);
-        updateGauge('temp', 26.5, TEMP_MIN, TEMP_MAX);
-        updateGauge('humid', 54.0, HUMID_MIN, HUMID_MAX);
-
-        applyEmergencyState({
-            active: false,
-            gasAbnormal: false,
-            tempAbnormal: false,
-            humidAbnormal: false,
-            gasVal: 420,
-            tempVal: 26.5,
-            humidVal: 54.0
-        });
+        // If ESP32 is online, resume live telemetry; otherwise zero all gauges
+        if (isDeviceOnline && lastLivePayload) {
+            processTelemetryPayload(lastLivePayload);
+        } else {
+            resetGaugesToZero();
+        }
     }
 }
 
@@ -1118,6 +1206,8 @@ const HEARTBEAT_TIMEOUT_MS = 8000; // 8 seconds (ESP32 transmits every 3s)
 let heartbeatWatchdogTimer = null;
 let initialStreamCheckTimer = null;
 let initialSnapshotHandled = false;
+let isDeviceOnline = false;
+let lastLivePayload = null;
 
 function processTelemetryPayload(data) {
     const temp = data.temperature !== undefined ? Number(data.temperature) : 25.0;
@@ -1148,7 +1238,9 @@ sensorRef.on('value', (snapshot) => {
     const data = snapshot.val();
 
     if (!data) {
-        setConnectionStatus(false, 'No sensor data found in database.');
+        isDeviceOnline = false;
+        setConnectionStatus(false, 'No sensor data found in database. Gauges zeroed.');
+        resetGaugesToZero();
         return;
     }
 
@@ -1158,18 +1250,23 @@ sensorRef.on('value', (snapshot) => {
         if (timeSinceLastPacket > HEARTBEAT_TIMEOUT_MS) {
             // Last packet was received more than 8 seconds ago -> Device is OFF!
             console.log(`[WATCHDOG] ESP32 is offline. Last seen ${Math.round(timeSinceLastPacket / 1000)}s ago.`);
-            setConnectionStatus(false, 'ESP32 device is offline / powered off. Showing last recorded state.');
-            processTelemetryPayload(data);
+            isDeviceOnline = false;
+            setConnectionStatus(false, 'ESP32 device is offline / powered off. Gauges zeroed.');
+            resetGaugesToZero();
             return;
         } else {
             // Live active stream
             clearTimeout(heartbeatWatchdogTimer);
+            isDeviceOnline = true;
+            lastLivePayload = data;
             setConnectionStatus(true);
             processTelemetryPayload(data);
 
             heartbeatWatchdogTimer = setTimeout(() => {
                 console.warn("[WATCHDOG] ESP32 telemetry stopped for 8s. Marking device offline.");
-                setConnectionStatus(false, 'ESP32 device powered off or disconnected.');
+                isDeviceOnline = false;
+                setConnectionStatus(false, 'ESP32 device powered off or disconnected. Gauges zeroed.');
+                resetGaugesToZero();
             }, HEARTBEAT_TIMEOUT_MS);
             return;
         }
@@ -1179,29 +1276,34 @@ sensorRef.on('value', (snapshot) => {
     if (!initialSnapshotHandled) {
         initialSnapshotHandled = true;
 
-        // Render last known readings onto gauges immediately
-        processTelemetryPayload(data);
-
-        // Start in offline/verifying state so we don't falsely claim a dead device is active
+        // Keep gauges and values at ZERO until live incoming stream is confirmed
+        isDeviceOnline = false;
+        resetGaugesToZero();
         setConnectionStatus(false, 'Verifying live device stream...');
 
         // ESP32 sends every 3s. If it is genuinely alive, a new live packet will arrive within 4.5s.
         initialStreamCheckTimer = setTimeout(() => {
             console.log("[WATCHDOG] No incoming live stream detected on startup. ESP32 is OFF.");
-            setConnectionStatus(false, 'ESP32 device is offline / powered off. Showing last recorded state.');
+            isDeviceOnline = false;
+            setConnectionStatus(false, 'ESP32 device is offline / powered off. Gauges zeroed.');
+            resetGaugesToZero();
         }, 4500);
     } else {
         // Subsequent live packet arrived! Device is definitely ON and transmitting!
         clearTimeout(initialStreamCheckTimer);
         clearTimeout(heartbeatWatchdogTimer);
 
+        isDeviceOnline = true;
+        lastLivePayload = data;
         setConnectionStatus(true);
         processTelemetryPayload(data);
 
-        // Re-arm 8-second watchdog: if user powers off ESP32, mark offline in 8 seconds
+        // Re-arm 8-second watchdog: if user powers off ESP32, mark offline in 8 seconds and zero gauges
         heartbeatWatchdogTimer = setTimeout(() => {
             console.warn("[WATCHDOG] ESP32 telemetry stopped for 8s. Marking device offline.");
-            setConnectionStatus(false, 'ESP32 device powered off or disconnected.');
+            isDeviceOnline = false;
+            setConnectionStatus(false, 'ESP32 device powered off or disconnected. Gauges zeroed.');
+            resetGaugesToZero();
         }, HEARTBEAT_TIMEOUT_MS);
     }
 });
@@ -1213,12 +1315,15 @@ connectedRef.on('value', (snap) => {
         console.log("Connected to Firebase Realtime Database cloud");
     } else {
         if (!isSimulationActive) {
-            setConnectionStatus(false, 'Network connection to cloud lost.');
+            isDeviceOnline = false;
+            setConnectionStatus(false, 'Network connection to cloud lost. Gauges zeroed.');
+            resetGaugesToZero();
         }
     }
 });
 
-// Initialize Chart.js when DOM is ready
+// Initialize Chart.js when DOM is ready and ensure gauges start at ZERO
 document.addEventListener('DOMContentLoaded', () => {
+    resetGaugesToZero();
     initCharts();
 });
