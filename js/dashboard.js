@@ -221,11 +221,19 @@ function updateBattery(percent) {
     }
 }
 
-function setConnectionStatus(isOnline) {
+function setConnectionStatus(isOnline, customMsg) {
     const dot = document.getElementById('mainStatusDot');
     const text = document.getElementById('mainStatusText');
     const banner = document.getElementById('statusBanner');
     const bannerMsg = document.getElementById('statusMessage');
+    const bannerHeadline = document.getElementById('bannerHeadline');
+    const bannerIcon = document.getElementById('bannerIcon');
+
+    const instDot = document.getElementById('instructionStatusDot');
+    const instTitle = document.getElementById('instructionStatusTitle');
+    const instDesc = document.getElementById('instructionStatusDesc');
+
+    const streamPill = document.querySelector('.stream-status-pill');
 
     if (dot && text) {
         if (isOnline) {
@@ -233,14 +241,36 @@ function setConnectionStatus(isOnline) {
             text.textContent = 'Live';
             if (!isEmergencyActive && banner && bannerMsg) {
                 banner.className = 'status-banner success';
-                bannerMsg.textContent = 'ESP32 is connected and sending live sensor data.';
+                if (bannerHeadline) bannerHeadline.textContent = 'Telemetry Stream Active';
+                if (bannerIcon) bannerIcon.className = 'fas fa-circle-check';
+                bannerMsg.textContent = customMsg || 'ESP32 is connected and actively streaming live sensor data.';
+            }
+            if (instDot && instTitle && instDesc) {
+                instDot.className = 'status-dot online';
+                instTitle.textContent = 'Device Linked & Actively Transmitting';
+                instDesc.textContent = 'ESP32 is sending sensor telemetry every 3 seconds.';
+            }
+            if (streamPill) {
+                streamPill.className = 'stream-status-pill';
+                streamPill.innerHTML = '<span class="pulse-ring"></span> <span>Live Stream Active</span>';
             }
         } else {
             dot.className = 'status-dot offline';
-            text.textContent = 'Disconnected';
+            text.textContent = 'Offline';
             if (!isEmergencyActive && banner && bannerMsg) {
                 banner.className = 'status-banner warning';
-                bannerMsg.textContent = 'Waiting for ESP32 sensor telemetry...';
+                if (bannerHeadline) bannerHeadline.textContent = 'Device Offline';
+                if (bannerIcon) bannerIcon.className = 'fas fa-power-off';
+                bannerMsg.textContent = customMsg || 'ESP32 is powered off or disconnected. Showing last recorded state.';
+            }
+            if (instDot && instTitle && instDesc) {
+                instDot.className = 'status-dot offline';
+                instTitle.textContent = 'Device Offline / Not Transmitting';
+                instDesc.textContent = 'The ESP32 is powered off. Slide the power switch to ON to resume telemetry.';
+            }
+            if (streamPill) {
+                streamPill.className = 'stream-status-pill stream-offline';
+                streamPill.innerHTML = '<span class="status-dot offline"></span> <span>Stream Paused (Device Offline)</span>';
             }
         }
     }
@@ -1037,50 +1067,99 @@ function switchDashboardTab(tabName) {
 }
 
 // ==========================================================================
-// FIREBASE REALTIME DATABASE LISTENER
+// ==========================================================================
+// FIREBASE REALTIME DATABASE LISTENER & HARDWARE HEARTBEAT WATCHDOG
 // ==========================================================================
 const sensorRef = database.ref('sensor_data');
-let hasReceivedData = false;
+const HEARTBEAT_TIMEOUT_MS = 8000; // 8 seconds (ESP32 transmits every 3s)
+let heartbeatWatchdogTimer = null;
+let initialStreamCheckTimer = null;
+let initialSnapshotHandled = false;
+
+function processTelemetryPayload(data) {
+    const temp = data.temperature !== undefined ? Number(data.temperature) : 25.0;
+    const humid = data.humidity !== undefined ? Number(data.humidity) : 50.0;
+    const gas = data.gas !== undefined ? Number(data.gas) : 400;
+
+    // 1. Update Speedometer Gauges
+    updateGauge('temp', temp, TEMP_MIN, TEMP_MAX);
+    updateGauge('humid', humid, HUMID_MIN, HUMID_MAX);
+    updateGauge('gas', gas, GAS_MIN, GAS_MAX);
+
+    // 2. Evaluate Emergency Hazard Thresholds
+    evaluateEmergencyConditions(temp, humid, gas);
+
+    // 3. Update Li-ion Battery
+    if (data.battery !== undefined) {
+        updateBattery(data.battery);
+    }
+
+    // 4. Record Telemetry in Waveform Charts & Stats
+    recordTelemetryPoint(temp, humid, gas);
+
+    // 5. Update Timestamp
+    updateTimestamp();
+}
 
 sensorRef.on('value', (snapshot) => {
     const data = snapshot.val();
 
-    if (data) {
-        hasReceivedData = true;
+    if (!data) {
+        setConnectionStatus(false, 'No sensor data found in database.');
+        return;
+    }
+
+    // CASE A: Payload contains server timestamp (e.g. data.last_seen)
+    if (data.last_seen) {
+        const timeSinceLastPacket = Date.now() - Number(data.last_seen);
+        if (timeSinceLastPacket > HEARTBEAT_TIMEOUT_MS) {
+            // Last packet was received more than 8 seconds ago -> Device is OFF!
+            console.log(`[WATCHDOG] ESP32 is offline. Last seen ${Math.round(timeSinceLastPacket / 1000)}s ago.`);
+            setConnectionStatus(false, 'ESP32 device is offline / powered off. Showing last recorded state.');
+            processTelemetryPayload(data);
+            return;
+        } else {
+            // Live active stream
+            clearTimeout(heartbeatWatchdogTimer);
+            setConnectionStatus(true);
+            processTelemetryPayload(data);
+
+            heartbeatWatchdogTimer = setTimeout(() => {
+                console.warn("[WATCHDOG] ESP32 telemetry stopped for 8s. Marking device offline.");
+                setConnectionStatus(false, 'ESP32 device powered off or disconnected.');
+            }, HEARTBEAT_TIMEOUT_MS);
+            return;
+        }
+    }
+
+    // CASE B: Fallback heartbeat verification (works even if firmware doesn't write last_seen)
+    if (!initialSnapshotHandled) {
+        initialSnapshotHandled = true;
+
+        // Render last known readings onto gauges immediately
+        processTelemetryPayload(data);
+
+        // Start in offline/verifying state so we don't falsely claim a dead device is active
+        setConnectionStatus(false, 'Verifying live device stream...');
+
+        // ESP32 sends every 3s. If it is genuinely alive, a new live packet will arrive within 4.5s.
+        initialStreamCheckTimer = setTimeout(() => {
+            console.log("[WATCHDOG] No incoming live stream detected on startup. ESP32 is OFF.");
+            setConnectionStatus(false, 'ESP32 device is offline / powered off. Showing last recorded state.');
+        }, 4500);
+    } else {
+        // Subsequent live packet arrived! Device is definitely ON and transmitting!
+        clearTimeout(initialStreamCheckTimer);
+        clearTimeout(heartbeatWatchdogTimer);
+
         setConnectionStatus(true);
+        processTelemetryPayload(data);
 
-        const temp = data.temperature !== undefined ? Number(data.temperature) : 25.0;
-        const humid = data.humidity !== undefined ? Number(data.humidity) : 50.0;
-        const gas = data.gas !== undefined ? Number(data.gas) : 400;
-
-        // 1. Update Speedometer Gauges
-        updateGauge('temp', temp, TEMP_MIN, TEMP_MAX);
-        updateGauge('humid', humid, HUMID_MIN, HUMID_MAX);
-        updateGauge('gas', gas, GAS_MIN, GAS_MAX);
-
-        // 2. Evaluate Emergency Hazard Thresholds
-        evaluateEmergencyConditions(temp, humid, gas);
-
-        // 3. Update Li-ion Battery
-        if (data.battery !== undefined) {
-            updateBattery(data.battery);
-        }
-
-        // 4. Record Telemetry in Waveform Charts & Stats
-        recordTelemetryPoint(temp, humid, gas);
-
-        // 5. Update Connection Guide pairing state
-        const instDot = document.getElementById('instructionStatusDot');
-        const instTitle = document.getElementById('instructionStatusTitle');
-        const instDesc = document.getElementById('instructionStatusDesc');
-        if (instDot && instTitle && instDesc) {
-            instDot.className = 'status-dot online';
-            instTitle.textContent = 'Device Linked & Actively Transmitting';
-            instDesc.textContent = 'ESP32 is sending sensor telemetry every 3 seconds.';
-        }
-
-        // 6. Update Timestamp
-        updateTimestamp();
+        // Re-arm 8-second watchdog: if user powers off ESP32, mark offline in 8 seconds
+        heartbeatWatchdogTimer = setTimeout(() => {
+            console.warn("[WATCHDOG] ESP32 telemetry stopped for 8s. Marking device offline.");
+            setConnectionStatus(false, 'ESP32 device powered off or disconnected.');
+        }, HEARTBEAT_TIMEOUT_MS);
     }
 });
 
@@ -1088,10 +1167,10 @@ sensorRef.on('value', (snapshot) => {
 const connectedRef = database.ref('.info/connected');
 connectedRef.on('value', (snap) => {
     if (snap.val() === true) {
-        console.log("Connected to Firebase Realtime Database");
+        console.log("Connected to Firebase Realtime Database cloud");
     } else {
-        if (hasReceivedData && !isSimulationActive) {
-            setConnectionStatus(false);
+        if (!isSimulationActive) {
+            setConnectionStatus(false, 'Network connection to cloud lost.');
         }
     }
 });
