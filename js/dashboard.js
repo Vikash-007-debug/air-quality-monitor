@@ -975,6 +975,9 @@ function recordTelemetryPoint(temp, humid, gas) {
 
     // 3. Update Historical Chart if active
     updateHistoricalChartDisplay();
+
+    // 4. Persist updated telemetry buffer for logged-in user
+    persistTelemetryBuffer();
 }
 
 /**
@@ -1140,6 +1143,19 @@ function clearHistoryLog() {
         if (maxEl) maxEl.textContent = '--';
         if (avgEl) avgEl.textContent = '--';
     });
+
+    // Wipe persisted storage for the logged-in user so clear persists across reloads
+    const user = auth.currentUser;
+    if (user && user.uid) {
+        try {
+            localStorage.removeItem(`aero_telemetry_${user.uid}`);
+            localStorage.removeItem(`aero_incidents_${user.uid}`);
+            localStorage.removeItem(`aero_incident_count_${user.uid}`);
+        } catch (e) {}
+        database.ref(`users/${user.uid}/telemetry_history`).remove().catch(() => {});
+        database.ref(`users/${user.uid}/incident_ledger`).remove().catch(() => {});
+        database.ref(`users/${user.uid}/incident_count`).remove().catch(() => {});
+    }
 }
 
 // ==========================================================================
@@ -1170,6 +1186,9 @@ function recordIncidentEvent(eventType, detailMsg, gas, temp, humid) {
     if (incidentLedger.length > 50) incidentLedger.pop();
 
     renderIncidentTable();
+
+    // Persist incident audit ledger for logged-in user
+    persistIncidentLedger();
 }
 
 function renderIncidentTable() {
@@ -1205,6 +1224,182 @@ function renderIncidentTable() {
 
     tbody.innerHTML = rowsHtml;
     if (counter) counter.textContent = `${incidentLedger.length} Records Recorded`;
+}
+
+// ==========================================================================
+// USER TELEMETRY & ALERT HISTORY PERSISTENCE (LocalStorage + Firebase Cloud)
+// Ensures history graph and audit ledger persist across tab reloads & logins
+// ==========================================================================
+let firebaseTelemetrySyncTimer = null;
+
+/**
+ * Save telemetry buffer to localStorage immediately and debounce sync to Firebase Realtime Database
+ */
+function persistTelemetryBuffer() {
+    const user = auth.currentUser;
+    if (!user || !user.uid) return;
+
+    try {
+        localStorage.setItem(`aero_telemetry_${user.uid}`, JSON.stringify(telemetryBuffer));
+    } catch (e) {
+        console.warn("Storage quota note:", e);
+    }
+
+    // Debounce cloud write to Firebase Realtime Database (sync every 5 seconds)
+    if (!firebaseTelemetrySyncTimer) {
+        firebaseTelemetrySyncTimer = setTimeout(() => {
+            firebaseTelemetrySyncTimer = null;
+            const currentUser = auth.currentUser;
+            if (currentUser && currentUser.uid === user.uid) {
+                database.ref(`users/${user.uid}/telemetry_history`).set(telemetryBuffer).catch(err => {
+                    console.warn("Firebase telemetry sync note:", err);
+                });
+            }
+        }, 5000);
+    }
+}
+
+/**
+ * Save incident ledger and emergency count to localStorage and Firebase Realtime Database
+ */
+function persistIncidentLedger() {
+    const user = auth.currentUser;
+    if (!user || !user.uid) return;
+
+    try {
+        localStorage.setItem(`aero_incidents_${user.uid}`, JSON.stringify(incidentLedger));
+        localStorage.setItem(`aero_incident_count_${user.uid}`, String(emergencyIncidentCount));
+    } catch (e) {
+        console.warn("Storage quota note:", e);
+    }
+
+    database.ref(`users/${user.uid}/incident_ledger`).set(incidentLedger).catch(err => {
+        console.warn("Firebase incident sync note:", err);
+    });
+    database.ref(`users/${user.uid}/incident_count`).set(emergencyIncidentCount).catch(err => {
+        console.warn("Firebase incident count sync note:", err);
+    });
+}
+
+/**
+ * Load and restore persisted telemetry history and incident ledger for authenticated user
+ */
+function loadUserPersistedHistory(user) {
+    if (!user || !user.uid) return;
+    const uid = user.uid;
+
+    // 1. Immediate restore from localStorage for instant, zero-latency tab reload
+    try {
+        const cachedTelemetry = localStorage.getItem(`aero_telemetry_${uid}`);
+        if (cachedTelemetry) {
+            const parsed = JSON.parse(cachedTelemetry);
+            if (parsed && Array.isArray(parsed.timestamps) && parsed.timestamps.length > 0) {
+                telemetryBuffer.timestamps = parsed.timestamps;
+                telemetryBuffer.gas = parsed.gas || [];
+                telemetryBuffer.temp = parsed.temp || [];
+                telemetryBuffer.humid = parsed.humid || [];
+            }
+        }
+
+        const cachedIncidents = localStorage.getItem(`aero_incidents_${uid}`);
+        if (cachedIncidents) {
+            const parsedIncidents = JSON.parse(cachedIncidents);
+            if (Array.isArray(parsedIncidents) && parsedIncidents.length > 0) {
+                incidentLedger = parsedIncidents;
+            }
+        }
+
+        const cachedCount = localStorage.getItem(`aero_incident_count_${uid}`);
+        if (cachedCount !== null) {
+            emergencyIncidentCount = parseInt(cachedCount, 10) || 0;
+        } else {
+            emergencyIncidentCount = incidentLedger.length;
+        }
+    } catch (e) {
+        console.warn("Local storage cache restore note:", e);
+    }
+
+    // Refresh UI components immediately with restored cache
+    renderIncidentTable();
+    const statCount = document.getElementById('statEmergencyCount');
+    if (statCount) statCount.innerHTML = `Incidents Today: <b>${emergencyIncidentCount}</b>`;
+
+    if (historicalChartInstance) {
+        updateHistoricalChartDisplay();
+    }
+    if (liveChartInstance && telemetryBuffer.timestamps.length > 0) {
+        liveChartInstance.data.labels = telemetryBuffer.timestamps.slice(-MAX_LIVE_POINTS);
+        liveChartInstance.data.datasets[0].data = telemetryBuffer.temp.slice(-MAX_LIVE_POINTS);
+        liveChartInstance.data.datasets[1].data = telemetryBuffer.humid.slice(-MAX_LIVE_POINTS);
+        liveChartInstance.data.datasets[2].data = telemetryBuffer.gas.slice(-MAX_LIVE_POINTS);
+        liveChartInstance.update();
+    }
+    if (telemetryBuffer.gas.length > 0) {
+        const lastIdx = telemetryBuffer.gas.length - 1;
+        updateStatisticalSummary(telemetryBuffer.temp[lastIdx], telemetryBuffer.humid[lastIdx], telemetryBuffer.gas[lastIdx]);
+    }
+
+    // 2. Cross-device Cloud synchronization via Firebase Realtime Database
+    database.ref(`users/${uid}`).once('value').then(snapshot => {
+        const val = snapshot.val();
+        if (!val) return;
+        let shouldUpdate = false;
+
+        // Sync telemetry history from cloud if cloud has records and local was empty or smaller
+        if (val.telemetry_history && Array.isArray(val.telemetry_history.timestamps)) {
+            if (telemetryBuffer.timestamps.length === 0 || val.telemetry_history.timestamps.length >= telemetryBuffer.timestamps.length) {
+                telemetryBuffer.timestamps = val.telemetry_history.timestamps;
+                telemetryBuffer.gas = val.telemetry_history.gas || [];
+                telemetryBuffer.temp = val.telemetry_history.temp || [];
+                telemetryBuffer.humid = val.telemetry_history.humid || [];
+                shouldUpdate = true;
+                try {
+                    localStorage.setItem(`aero_telemetry_${uid}`, JSON.stringify(telemetryBuffer));
+                } catch (e) {}
+            }
+        }
+
+        // Sync incident audit ledger from cloud
+        if (val.incident_ledger && Array.isArray(val.incident_ledger)) {
+            if (incidentLedger.length === 0 || val.incident_ledger.length >= incidentLedger.length) {
+                incidentLedger = val.incident_ledger;
+                shouldUpdate = true;
+                try {
+                    localStorage.setItem(`aero_incidents_${uid}`, JSON.stringify(incidentLedger));
+                } catch (e) {}
+            }
+        }
+
+        if (val.incident_count !== undefined) {
+            emergencyIncidentCount = Number(val.incident_count) || incidentLedger.length;
+            try {
+                localStorage.setItem(`aero_incident_count_${uid}`, String(emergencyIncidentCount));
+            } catch (e) {}
+            shouldUpdate = true;
+        }
+
+        if (shouldUpdate) {
+            renderIncidentTable();
+            const statCountEl = document.getElementById('statEmergencyCount');
+            if (statCountEl) statCountEl.innerHTML = `Incidents Today: <b>${emergencyIncidentCount}</b>`;
+            if (historicalChartInstance) {
+                updateHistoricalChartDisplay();
+            }
+            if (liveChartInstance && telemetryBuffer.timestamps.length > 0) {
+                liveChartInstance.data.labels = telemetryBuffer.timestamps.slice(-MAX_LIVE_POINTS);
+                liveChartInstance.data.datasets[0].data = telemetryBuffer.temp.slice(-MAX_LIVE_POINTS);
+                liveChartInstance.data.datasets[1].data = telemetryBuffer.humid.slice(-MAX_LIVE_POINTS);
+                liveChartInstance.data.datasets[2].data = telemetryBuffer.gas.slice(-MAX_LIVE_POINTS);
+                liveChartInstance.update();
+            }
+            if (telemetryBuffer.gas.length > 0) {
+                const lastIdx = telemetryBuffer.gas.length - 1;
+                updateStatisticalSummary(telemetryBuffer.temp[lastIdx], telemetryBuffer.humid[lastIdx], telemetryBuffer.gas[lastIdx]);
+            }
+        }
+    }).catch(err => {
+        console.warn("Cloud history sync note:", err);
+    });
 }
 
 // ==========================================================================
@@ -1414,4 +1609,26 @@ connectedRef.on('value', (snap) => {
 document.addEventListener('DOMContentLoaded', () => {
     resetGaugesToZero();
     initCharts();
+    if (auth.currentUser) {
+        loadUserPersistedHistory(auth.currentUser);
+    }
+});
+
+// Monitor authentication to load persistent history & alerts for the logged-in user
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        loadUserPersistedHistory(user);
+    }
+});
+
+// Ensure any pending storage writes are flushed before page unloads
+window.addEventListener('beforeunload', () => {
+    const user = auth.currentUser;
+    if (user && user.uid) {
+        try {
+            localStorage.setItem(`aero_telemetry_${user.uid}`, JSON.stringify(telemetryBuffer));
+            localStorage.setItem(`aero_incidents_${user.uid}`, JSON.stringify(incidentLedger));
+            localStorage.setItem(`aero_incident_count_${user.uid}`, String(emergencyIncidentCount));
+        } catch (e) {}
+    }
 });
