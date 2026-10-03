@@ -1151,36 +1151,56 @@ body.emergency-mode .emergency-dispatch-icon,
    TAB 3: HISTORY & AUDIT LOG TABLE
    ========================================================================= */
 .time-filter-group {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    background: rgba(20, 20, 30, 0.7);
+    gap: 6px;
+    background: rgba(14, 14, 22, 0.9);
     border: 1px solid var(--border-silver);
     padding: 4px;
-    border-radius: 20px;
+    border-radius: 22px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 .filter-pill {
     background: transparent;
-    border: none;
+    border: 1px solid transparent;
     color: var(--text-silver);
     font-family: inherit;
     font-size: 12px;
     font-weight: 600;
     padding: 6px 14px;
-    border-radius: 16px;
+    border-radius: 18px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    outline: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .filter-pill:hover {
     color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .filter-pill.active {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(203, 213, 225, 0.08));
-    border: 1px solid var(--border-silver-bright);
-    color: #ffffff;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.24) 0%, rgba(200, 205, 225, 0.12) 100%) !important;
+    border: 1px solid #ffffff !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+    transform: translateY(-1px);
+}
+
+.filter-pill.btn-clear {
+    color: var(--text-muted);
+}
+
+.filter-pill.btn-clear:hover {
+    color: var(--emergency-crimson);
+    background: rgba(255, 23, 68, 0.1);
+    border-color: rgba(255, 23, 68, 0.3);
 }
 
 .chart-timestamp {
@@ -1826,281 +1846,6 @@ button, a, input[type="range"] {
     text-align: center;
 }
 
-/* ==========================================================================
-   RESPONSIVE QUERIES: TABLETS & MOBILE (<= 900px)
-   ========================================================================== */
-@media (max-width: 900px) {
-    .mobile-nav-toggle {
-        display: flex;
-    }
-
-    .home-nav-links {
-        display: none !important;
-    }
-
-    .home-nav-actions {
-        display: none !important;
-    }
-
-    .home-nav {
-        padding: 12px 18px;
-    }
-
-    /* Dashboard Navbar Layout */
-    .navbar {
-        flex-wrap: wrap;
-        padding: 12px 16px;
-        gap: 12px;
-    }
-
-    .nav-brand {
-        flex: 1;
-    }
-
-    .nav-right {
-        gap: 8px;
-    }
-
-    /* Native Horizontal Swipeable Tab Bar on Phone */
-    .nav-tabs {
-        order: 3;
-        width: 100%;
-        display: flex !important;
-        flex-wrap: nowrap !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        scrollbar-width: none !important;
-        padding: 4px 2px 6px 2px;
-        gap: 8px;
-        justify-content: flex-start !important;
-        margin-top: 4px;
-    }
-
-    .nav-tabs::-webkit-scrollbar {
-        display: none;
-    }
-
-    .nav-tab {
-        flex-shrink: 0;
-        white-space: nowrap;
-        padding: 8px 14px;
-        font-size: 12px;
-        border-radius: 20px;
-    }
-
-    .nav-tab span {
-        display: inline !important;
-    }
-
-    /* Home Hero Phone Refinement */
-    .home-hero {
-        grid-template-columns: 1fr;
-        padding: 30px 18px 50px 18px;
-        gap: 36px;
-    }
-
-    .hero-title {
-        font-size: clamp(28px, 6.5vw, 42px);
-        line-height: 1.2;
-    }
-
-    .hero-description {
-        font-size: 14px;
-        margin-bottom: 24px;
-    }
-
-    .hero-cta-group {
-        width: 100%;
-    }
-
-    .hero-metrics-strip {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-        padding-top: 20px;
-    }
-
-    .metric-item {
-        text-align: center;
-    }
-
-    .simulator-box {
-        grid-template-columns: 1fr;
-        padding: 26px 18px;
-        gap: 28px;
-    }
-}
-
-/* ==========================================================================
-   RESPONSIVE QUERIES: TABLETS & MOBILE PHONES (<= 768px)
-   ========================================================================== */
-@media (max-width: 768px) {
-    .dashboard-content {
-        padding: 16px 12px;
-    }
-
-    .gauges-section,
-    .instructions-grid,
-    .stats-metric-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
-    }
-
-    .gauge-card {
-        padding: 20px 16px;
-    }
-
-    .user-name {
-        display: none;
-    }
-
-    .chart-panel {
-        padding: 18px 14px;
-    }
-
-    .chart-panel-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .chart-legend-custom {
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-
-    .chart-canvas-box {
-        height: 240px;
-    }
-
-    .emergency-content {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-    }
-
-    .emergency-actions {
-        width: 100%;
-    }
-
-    .emergency-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .instructions-live-card {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 14px;
-        padding: 18px 16px;
-    }
-
-    .live-card-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .home-section {
-        padding: 48px 16px;
-    }
-
-    .section-head-center {
-        margin-bottom: 32px;
-    }
-
-    .section-head-center h2 {
-        font-size: clamp(22px, 5vw, 28px);
-    }
-
-    .sensors-showcase-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
-    }
-
-    .architecture-timeline {
-        grid-template-columns: 1fr;
-        gap: 14px;
-    }
-
-    .email-toast {
-        left: 14px;
-        right: 14px;
-        bottom: 14px;
-        max-width: calc(100% - 28px);
-    }
-}
-
-/* ==========================================================================
-   RESPONSIVE QUERIES: SMARTPHONES (<= 480px)
-   ========================================================================== */
-@media (max-width: 480px) {
-    .brand-title {
-        font-size: 14px;
-    }
-
-    .brand-subtitle {
-        display: none;
-    }
-
-    .action-pill-btn span {
-        display: none;
-    }
-
-    .action-pill-btn {
-        padding: 8px 10px;
-        font-size: 13px;
-        min-width: 36px;
-    }
-
-    .connection-status {
-        padding: 6px 10px;
-    }
-
-    .connection-status .status-text {
-        display: none;
-    }
-
-    .value-number {
-        font-size: 28px;
-    }
-
-    .hero-cta-group {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .hero-cta-group .btn-matte-primary,
-    .hero-cta-group .btn-matte-silver {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .sim-slider::-webkit-slider-thumb {
-        width: 24px;
-        height: 24px;
-    }
-
-    .sim-gauges-cluster {
-        grid-template-columns: 1fr;
-        gap: 14px;
-    }
-
-    .sim-gauge-card {
-        max-width: 250px;
-        width: 100%;
-        margin: 0 auto;
-    }
-
-    .login-card {
-        padding: 32px 18px;
-        width: 100%;
-    }
-
-    .log-table th, .log-table td {
-        padding: 10px 10px;
-        font-size: 11px;
-    }
-}
 
 /* ==========================================================================
    HOME PAGE - MATTE FINISHED STYLES & SENSOR SUITE SHOWCASE
@@ -2610,10 +2355,11 @@ button, a, input[type="range"] {
     padding: 36px 32px;
     box-shadow: var(--shadow-card);
     display: grid;
-    grid-template-columns: 360px 1fr;
+    grid-template-columns: 380px 1fr;
     gap: 36px;
     align-items: center;
     transition: all 0.4s ease;
+    box-sizing: border-box;
 }
 
 .simulator-box.sim-emergency {
@@ -2626,39 +2372,128 @@ button, a, input[type="range"] {
     display: flex;
     flex-direction: column;
     gap: 22px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-.sim-control-group label {
+.sim-control-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.sim-control-label {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    width: 100%;
+    gap: 10px;
+}
+
+.sim-sensor-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 13px;
     font-weight: 600;
     color: #ffffff;
-    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sim-value-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: rgba(10, 10, 18, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 10px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+    text-align: right;
+    letter-spacing: 0.2px;
 }
 
 .sim-slider {
     width: 100%;
-    height: 6px;
-    border-radius: 3px;
-    background: #1e1e2d;
+    height: 8px;
+    border-radius: 4px;
+    background: #181824;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     outline: none;
     -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    margin: 8px 0 4px 0;
+    display: block;
+    touch-action: pan-y;
+    box-sizing: border-box;
+}
+
+.sim-slider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    background: #181824;
 }
 
 .sim-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 18px;
-    height: 18px;
+    appearance: none;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: #ffffff;
     cursor: pointer;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
-    transition: transform 0.15s ease;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.95), 0 2px 6px rgba(0, 0, 0, 0.6);
+    border: 2px solid #a1a1aa;
+    margin-top: -7px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.sim-slider::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
+.sim-slider::-webkit-slider-thumb:hover,
+.sim-slider:active::-webkit-slider-thumb {
+    transform: scale(1.18);
+    box-shadow: 0 0 18px rgba(255, 255, 255, 1);
+}
+
+.sim-slider::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: #181824;
+    border: none;
+}
+
+.sim-slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #ffffff;
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.95);
+    border: 2px solid #a1a1aa;
+}
+
+.sim-slider-scale {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    margin-top: 5px;
+    width: 100%;
+    letter-spacing: 0.2px;
+}
+
+.sim-slider-scale .scale-hazard {
+    color: var(--emergency-crimson);
+    font-weight: 600;
+    text-align: center;
 }
 
 .sim-preview-display {
@@ -2667,6 +2502,7 @@ button, a, input[type="range"] {
     align-items: center;
     text-align: center;
     width: 100%;
+    box-sizing: border-box;
 }
 
 /* 3-Gauge Live Sandbox Cluster */
@@ -2675,13 +2511,14 @@ button, a, input[type="range"] {
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .sim-gauge-card {
     background: rgba(14, 14, 22, 0.85);
     border: 1px solid var(--border-silver);
     border-radius: var(--radius-md);
-    padding: 16px 10px 14px 10px;
+    padding: 16px 12px 14px 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2690,6 +2527,7 @@ button, a, input[type="range"] {
     position: relative;
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
     min-width: 0;
+    box-sizing: border-box;
 }
 
 .sim-gauge-card:hover {
@@ -2726,7 +2564,7 @@ button, a, input[type="range"] {
 
 .sim-gauge-card .gauge-svg {
     width: 100%;
-    max-width: 180px;
+    max-width: 200px;
     height: auto;
     display: block;
     margin: 0 auto;
@@ -2853,3 +2691,466 @@ button, a, input[type="range"] {
     color: #ffffff;
 }
 
+
+
+
+/* ==========================================================================
+   RESPONSIVE QUERIES: TABLETS & MEDIUM VIEWPORTS (<= 992px)
+   ========================================================================== */
+@media (max-width: 992px) {
+    .mobile-nav-toggle {
+        display: flex;
+    }
+
+    .home-nav-links {
+        display: none !important;
+    }
+
+    .home-nav-actions {
+        display: none !important;
+    }
+
+    .home-nav {
+        padding: 12px 18px;
+    }
+
+    /* Dashboard Navbar Layout */
+    .navbar {
+        flex-wrap: wrap;
+        padding: 12px 16px;
+        gap: 12px;
+    }
+
+    .nav-brand {
+        flex: 1;
+    }
+
+    .nav-right {
+        gap: 8px;
+    }
+
+    /* Native Horizontal Swipeable Tab Bar on Phone/Tablet */
+    .nav-tabs {
+        order: 3;
+        width: 100%;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        padding: 4px 2px 6px 2px;
+        gap: 8px;
+        justify-content: flex-start !important;
+        margin-top: 4px;
+    }
+
+    .nav-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .nav-tab {
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 8px 14px;
+        font-size: 12px;
+        border-radius: 20px;
+    }
+
+    .nav-tab span {
+        display: inline !important;
+    }
+
+    /* Home Hero Layout */
+    .home-hero {
+        grid-template-columns: 1fr;
+        padding: 30px 18px 50px 18px;
+        gap: 36px;
+    }
+
+    .hero-title {
+        font-size: clamp(28px, 6.5vw, 42px);
+        line-height: 1.2;
+    }
+
+    .hero-description {
+        font-size: 14px;
+        margin-bottom: 24px;
+    }
+
+    .hero-cta-group {
+        width: 100%;
+    }
+
+    .hero-metrics-strip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        padding-top: 20px;
+    }
+
+    .metric-item {
+        text-align: center;
+    }
+
+    /* Interactive Sensor Sandbox / Simulator */
+    .simulator-box {
+        display: flex !important;
+        flex-direction: column !important;
+        grid-template-columns: 1fr !important;
+        width: 100% !important;
+        padding: 28px 22px !important;
+        gap: 28px !important;
+        box-sizing: border-box !important;
+    }
+
+    .sim-controls {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 20px !important;
+    }
+
+    .sim-preview-display {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        box-sizing: border-box !important;
+    }
+
+    .sim-gauges-cluster {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 14px !important;
+        width: 100% !important;
+    }
+}
+
+/* ==========================================================================
+   RESPONSIVE QUERIES: SMARTPHONES & TABLETS (<= 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+    .dashboard-content {
+        padding: 16px 12px;
+    }
+
+    .gauges-section,
+    .instructions-grid,
+    .stats-metric-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .gauge-card {
+        padding: 20px 16px;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .chart-panel {
+        padding: 18px 14px;
+    }
+
+    .chart-panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .chart-legend-custom {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .chart-canvas-box {
+        height: 250px;
+    }
+
+    .emergency-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .emergency-actions {
+        width: 100%;
+    }
+
+    .emergency-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .instructions-live-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+        padding: 18px 16px;
+    }
+
+    .live-card-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .home-section {
+        padding: 44px 16px;
+    }
+
+    .section-head-center {
+        margin-bottom: 26px;
+    }
+
+    .section-head-center h2 {
+        font-size: clamp(22px, 5vw, 28px);
+    }
+
+    .sensors-showcase-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    .architecture-timeline {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+
+    .email-toast {
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+        max-width: calc(100% - 28px);
+    }
+
+    /* Tab 3: History & Audit Log Section */
+    .section-top-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    .time-filter-group {
+        display: flex !important;
+        width: 100% !important;
+        justify-content: space-between !important;
+        padding: 4px !important;
+        gap: 4px !important;
+        box-sizing: border-box !important;
+    }
+
+    .filter-pill {
+        flex: 1 !important;
+        justify-content: center !important;
+        padding: 7px 8px !important;
+        font-size: 11.5px !important;
+        text-align: center !important;
+    }
+
+    /* Live Test Speedometer & Sliders in Sandbox */
+    .simulator-box {
+        padding: 22px 14px !important;
+        gap: 24px !important;
+    }
+
+    .sim-controls {
+        gap: 18px !important;
+    }
+
+    .sim-control-label {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin-bottom: 8px !important;
+        gap: 8px !important;
+    }
+
+    .sim-sensor-name {
+        font-size: 12.5px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+    }
+
+    .sim-value-pill {
+        font-size: 12.5px !important;
+        padding: 3px 8px !important;
+    }
+
+    .sim-slider-scale {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        font-size: 10px !important;
+        margin-top: 4px !important;
+        width: 100% !important;
+    }
+
+    .sim-slider-scale .scale-hazard {
+        font-size: 9.5px !important;
+    }
+
+    .sim-gauges-cluster {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+        width: 100% !important;
+        max-width: 310px !important;
+        margin: 0 auto !important;
+    }
+
+    .sim-gauge-card {
+        width: 100% !important;
+        max-width: 290px !important;
+        margin: 0 auto !important;
+        padding: 16px 12px 14px 12px !important;
+        box-sizing: border-box !important;
+    }
+
+    .sim-gauge-card .gauge-svg {
+        width: 100% !important;
+        max-width: 220px !important;
+        height: auto !important;
+        display: block !important;
+        margin: 0 auto !important;
+    }
+
+    .sim-badge {
+        width: 100% !important;
+        max-width: 310px !important;
+        box-sizing: border-box !important;
+        padding: 8px 14px !important;
+        font-size: 11.5px !important;
+        text-align: center !important;
+        justify-content: center !important;
+    }
+}
+
+/* ==========================================================================
+   RESPONSIVE QUERIES: SMARTPHONES (<= 480px)
+   ========================================================================== */
+@media (max-width: 480px) {
+    .brand-title {
+        font-size: 14px;
+    }
+
+    .brand-subtitle {
+        display: none;
+    }
+
+    .action-pill-btn span {
+        display: none;
+    }
+
+    .action-pill-btn {
+        padding: 8px 10px;
+        font-size: 13px;
+        min-width: 36px;
+    }
+
+    .connection-status {
+        padding: 6px 10px;
+    }
+
+    .connection-status .status-text {
+        display: none;
+    }
+
+    .value-number {
+        font-size: 28px;
+    }
+
+    .hero-cta-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .hero-cta-group .btn-matte-primary,
+    .hero-cta-group .btn-matte-silver {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .simulator-box {
+        padding: 18px 12px !important;
+        gap: 20px !important;
+        border-radius: var(--radius-md) !important;
+    }
+
+    .sim-control-label {
+        font-size: 12px !important;
+    }
+
+    .sim-sensor-name {
+        font-size: 11.5px !important;
+        gap: 5px !important;
+    }
+
+    .sim-value-pill {
+        font-size: 11.5px !important;
+        padding: 3px 6px !important;
+    }
+
+    .sim-slider-scale {
+        font-size: 9px !important;
+    }
+
+    .sim-slider-scale .scale-hazard {
+        font-size: 8.5px !important;
+    }
+
+    .time-filter-group {
+        padding: 3px !important;
+        gap: 2px !important;
+    }
+
+    .filter-pill {
+        padding: 6px 5px !important;
+        font-size: 11px !important;
+        gap: 3px !important;
+    }
+
+    .filter-pill i {
+        font-size: 10px !important;
+    }
+
+    .login-card {
+        padding: 32px 18px;
+        width: 100%;
+    }
+
+    .log-table th, .log-table td {
+        padding: 10px 8px;
+        font-size: 10.5px;
+    }
+}
+
+/* ==========================================================================
+   RESPONSIVE QUERIES: ULTRA-COMPACT SMARTPHONES (<= 360px)
+   ========================================================================== */
+@media (max-width: 360px) {
+    .filter-pill {
+        padding: 5px 3px !important;
+        font-size: 10px !important;
+    }
+
+    .filter-pill span {
+        font-size: 10px !important;
+    }
+
+    .sim-slider-scale {
+        font-size: 8px !important;
+    }
+
+    .sim-slider-scale .scale-hazard {
+        font-size: 8px !important;
+    }
+
+    .sim-gauge-card {
+        max-width: 260px !important;
+        padding: 12px 8px !important;
+    }
+}

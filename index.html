@@ -371,41 +371,41 @@
                 <!-- Sliders Column -->
                 <div class="sim-controls">
                     <div class="sim-control-group">
-                        <label>
-                            <span><i class="fas fa-smog"></i> Air Quality Gas (MQ-135)</span>
-                            <span class="font-mono" id="simGasLabel" style="color: #10b981;">450 PPM</span>
+                        <label class="sim-control-label">
+                            <span class="sim-sensor-name"><i class="fas fa-smog" style="color: #10b981;"></i> Air Quality Gas (MQ-135)</span>
+                            <span class="sim-value-pill font-mono" id="simGasLabel" style="color: #10b981;">450 PPM</span>
                         </label>
-                        <input type="range" min="0" max="4095" value="450" class="sim-slider" id="simGasSlider" oninput="runSandboxSimulation()">
-                        <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-top: 4px;">
-                            <span>0 PPM (Clean)</span>
-                            <span style="color: var(--emergency-crimson);">1600+ PPM (Emergency Zone)</span>
-                            <span>4095 PPM</span>
+                        <input type="range" min="0" max="4095" value="450" class="sim-slider" id="simGasSlider" oninput="runSandboxSimulation()" aria-label="Simulate MQ-135 Gas PPM">
+                        <div class="sim-slider-scale">
+                            <span class="scale-min">0 PPM (Clean)</span>
+                            <span class="scale-hazard"><i class="fas fa-triangle-exclamation"></i> 1600+ PPM (Emergency Zone)</span>
+                            <span class="scale-max">4095 PPM</span>
                         </div>
                     </div>
 
                     <div class="sim-control-group">
-                        <label>
-                            <span><i class="fas fa-temperature-half"></i> Temperature (DHT11)</span>
-                            <span class="font-mono" id="simTempLabel" style="color: #f97316;">26.0 °C</span>
+                        <label class="sim-control-label">
+                            <span class="sim-sensor-name"><i class="fas fa-temperature-half" style="color: #f97316;"></i> Temperature (DHT11)</span>
+                            <span class="sim-value-pill font-mono" id="simTempLabel" style="color: #f97316;">26.0 °C</span>
                         </label>
-                        <input type="range" min="0" max="50" step="0.5" value="26.0" class="sim-slider" id="simTempSlider" oninput="runSandboxSimulation()">
-                        <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-top: 4px;">
-                            <span>0°C (Cold)</span>
-                            <span style="color: var(--emergency-crimson);">40°C+ (Overheat Zone)</span>
-                            <span>50°C</span>
+                        <input type="range" min="0" max="50" step="0.5" value="26.0" class="sim-slider" id="simTempSlider" oninput="runSandboxSimulation()" aria-label="Simulate DHT11 Temperature">
+                        <div class="sim-slider-scale">
+                            <span class="scale-min">0°C (Cold)</span>
+                            <span class="scale-hazard"><i class="fas fa-triangle-exclamation"></i> 40°C+ (Overheat Zone)</span>
+                            <span class="scale-max">50°C</span>
                         </div>
                     </div>
 
                     <div class="sim-control-group">
-                        <label>
-                            <span><i class="fas fa-droplet"></i> Relative Moisture (DHT11)</span>
-                            <span class="font-mono" id="simHumidLabel" style="color: var(--accent-cyan);">55.0 %</span>
+                        <label class="sim-control-label">
+                            <span class="sim-sensor-name"><i class="fas fa-droplet" style="color: var(--accent-cyan);"></i> Relative Moisture (DHT11)</span>
+                            <span class="sim-value-pill font-mono" id="simHumidLabel" style="color: var(--accent-cyan);">55.0 %</span>
                         </label>
-                        <input type="range" min="0" max="100" step="1" value="55" class="sim-slider" id="simHumidSlider" oninput="runSandboxSimulation()">
-                        <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-top: 4px;">
-                            <span>0% (Dry)</span>
-                            <span style="color: var(--emergency-crimson);">88%+ (Condensation Zone)</span>
-                            <span>100%</span>
+                        <input type="range" min="0" max="100" step="1" value="55" class="sim-slider" id="simHumidSlider" oninput="runSandboxSimulation()" aria-label="Simulate DHT11 Moisture">
+                        <div class="sim-slider-scale">
+                            <span class="scale-min">0% (Dry)</span>
+                            <span class="scale-hazard"><i class="fas fa-triangle-exclamation"></i> 88%+ (Condensation Zone)</span>
+                            <span class="scale-max">100%</span>
                         </div>
                     </div>
                 </div>

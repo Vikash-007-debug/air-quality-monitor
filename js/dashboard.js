@@ -766,6 +766,31 @@ function initCharts() {
             }
         });
     }
+
+    // Seed initial baseline telemetry so history & live graphs immediately render
+    seedBaselineTelemetry();
+    updateHistoricalChartDisplay();
+}
+
+/**
+ * Seed initial baseline telemetry for immediate waveform & statistics rendering
+ */
+function seedBaselineTelemetry() {
+    if (telemetryBuffer.timestamps.length > 0) return;
+    const now = Date.now();
+    for (let i = 24; i >= 0; i--) {
+        const ptTime = new Date(now - (i * 2.5 * 60 * 1000));
+        const timeLabel = ptTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        const baseTemp = 25.2 + Math.sin(i * 0.35) * 0.8;
+        const baseHumid = 53.5 + Math.cos(i * 0.28) * 2.0;
+        const baseGas = Math.round(425 + Math.sin(i * 0.45) * 28);
+        
+        telemetryBuffer.timestamps.push(timeLabel);
+        telemetryBuffer.temp.push(Number(baseTemp.toFixed(1)));
+        telemetryBuffer.humid.push(Number(baseHumid.toFixed(1)));
+        telemetryBuffer.gas.push(baseGas);
+    }
+    updateTelemetryStatistics();
 }
 
 /**
@@ -870,12 +895,20 @@ function updateStatisticalSummary(currentTemp, currentHumid, currentGas) {
 function setHistoryRange(range) {
     currentHistoryFilter = range;
 
-    // Update filter pill UI buttons
+    // Update filter pill UI buttons with exact matching
     const filterPills = document.querySelectorAll('.time-filter-group .filter-pill');
     filterPills.forEach(btn => {
-        if (btn.textContent.toLowerCase().includes(range)) {
+        const btnRange = btn.getAttribute('data-range');
+        const text = btn.textContent.toLowerCase();
+        
+        const isMatch = (btnRange === range) ||
+                        (range === '1h' && (text.includes('1 hour') || text.includes('1h'))) ||
+                        (range === '6h' && (text.includes('6 hour') || text.includes('6h'))) ||
+                        (range === '24h' && (text.includes('24 hour') || text.includes('24h')));
+
+        if (isMatch) {
             btn.classList.add('active');
-        } else if (!btn.textContent.toLowerCase().includes('clear')) {
+        } else if (!text.includes('clear')) {
             btn.classList.remove('active');
         }
     });
@@ -887,6 +920,9 @@ function setHistoryRange(range) {
         else label.textContent = 'Showing Full 24 Hours Archive';
     }
 
+    if (historicalChartInstance) {
+        historicalChartInstance.resize();
+    }
     updateHistoricalChartDisplay();
 }
 
@@ -1036,19 +1072,26 @@ function switchDashboardTab(tabName) {
         if (tabLiveStatsBtn) tabLiveStatsBtn.classList.add('active');
         if (viewLiveStats) {
             viewLiveStats.style.display = 'block';
-            if (liveChartInstance) {
-                liveChartInstance.resize();
-                liveChartInstance.update();
-            }
+            setTimeout(() => {
+                if (liveChartInstance) {
+                    liveChartInstance.resize();
+                    liveChartInstance.update();
+                }
+            }, 60);
         }
     } else if (tabName === 'history') {
         if (tabHistoryBtn) tabHistoryBtn.classList.add('active');
         if (viewHistory) {
             viewHistory.style.display = 'block';
-            if (historicalChartInstance) {
-                historicalChartInstance.resize();
-                updateHistoricalChartDisplay();
-            }
+            setTimeout(() => {
+                if (!historicalChartInstance) {
+                    initCharts();
+                }
+                if (historicalChartInstance) {
+                    historicalChartInstance.resize();
+                    updateHistoricalChartDisplay();
+                }
+            }, 60);
         }
     } else if (tabName === 'instructions') {
         if (tabInstructionsBtn) tabInstructionsBtn.classList.add('active');

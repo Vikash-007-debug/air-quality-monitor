@@ -454,11 +454,19 @@
                     <p>Aggregated sensor trends, safety thresholds, and chronological incident audit records.</p>
                 </div>
                 <!-- Range Selector Filter Pills -->
-                <div class="time-filter-group">
-                    <button class="filter-pill active" onclick="setHistoryRange('1h')">1 Hour</button>
-                    <button class="filter-pill" onclick="setHistoryRange('6h')">6 Hours</button>
-                    <button class="filter-pill" onclick="setHistoryRange('24h')">24 Hours</button>
-                    <button class="filter-pill" onclick="clearHistoryLog()"><i class="fas fa-trash-can"></i> Clear</button>
+                <div class="time-filter-group" id="timeFilterGroup">
+                    <button class="filter-pill active" id="btnFilter1h" data-range="1h" onclick="setHistoryRange('1h')">
+                        <i class="fas fa-clock"></i> <span>1 Hour</span>
+                    </button>
+                    <button class="filter-pill" id="btnFilter6h" data-range="6h" onclick="setHistoryRange('6h')">
+                        <i class="fas fa-clock"></i> <span>6 Hours</span>
+                    </button>
+                    <button class="filter-pill" id="btnFilter24h" data-range="24h" onclick="setHistoryRange('24h')">
+                        <i class="fas fa-calendar-day"></i> <span>24 Hours</span>
+                    </button>
+                    <button class="filter-pill btn-clear" id="btnFilterClear" onclick="clearHistoryLog()">
+                        <i class="fas fa-trash-can"></i> <span>Clear</span>
+                    </button>
                 </div>
             </div>
 
