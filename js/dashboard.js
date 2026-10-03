@@ -281,6 +281,9 @@ function resetEmergencyState() {
  * Reset all speedometer gauges, values boxes, and status badges to ZERO when ESP32 is offline
  */
 function resetGaugesToZero() {
+    // If user is actively running the Test Alert simulation, do NOT reset gauges or cancel emergency mode!
+    if (isSimulationActive) return;
+
     // 1. Reset Needle Positions to 0 (-90deg calibration)
     const tempNeedle = document.getElementById('tempNeedle');
     const humidNeedle = document.getElementById('humidNeedle');
@@ -557,6 +560,9 @@ function startAudioAlert() {
 
         function playBeep() {
             if (isAudioMuted || !isEmergencyActive) return;
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().catch(() => {});
+            }
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
 
@@ -1275,7 +1281,7 @@ function switchDashboardTab(tabName) {
 // FIREBASE REALTIME DATABASE LISTENER & HARDWARE HEARTBEAT WATCHDOG
 // ==========================================================================
 const sensorRef = database.ref('sensor_data');
-const HEARTBEAT_TIMEOUT_MS = 8000; // 8 seconds (ESP32 transmits every 3s)
+const HEARTBEAT_TIMEOUT_MS = 12000; // 12 seconds gives margin for Wi-Fi jitter if ESP32 sends every 3s
 let heartbeatWatchdogTimer = null;
 let initialStreamCheckTimer = null;
 let initialSnapshotHandled = false;
@@ -1286,6 +1292,15 @@ function processTelemetryPayload(data) {
     const temp = data.temperature !== undefined ? Number(data.temperature) : 25.0;
     const humid = data.humidity !== undefined ? Number(data.humidity) : 50.0;
     const gas = data.gas !== undefined ? Number(data.gas) : 400;
+
+    // If user is actively running the Test Alert simulation, record telemetry in buffer/battery
+    // but do NOT overwrite simulated emergency gauges or hazard mode on screen!
+    if (isSimulationActive) {
+        if (data.battery !== undefined) updateBattery(data.battery);
+        recordTelemetryPoint(temp, humid, gas);
+        updateTimestamp();
+        return;
+    }
 
     // 1. Update Speedometer Gauges
     updateGauge('temp', temp, TEMP_MIN, TEMP_MAX);
