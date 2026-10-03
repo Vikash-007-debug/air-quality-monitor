@@ -1024,6 +1024,16 @@ function switchDashboardTab(tabName) {
         if (tabInstructionsBtn) tabInstructionsBtn.classList.add('active');
         if (viewInstructions) viewInstructions.style.display = 'block';
     }
+
+    // Auto-scroll active tab into center view on mobile tab bar
+    const activeBtn = tabName === 'dashboard' ? tabDashboardBtn :
+                     tabName === 'liveStats' ? tabLiveStatsBtn :
+                     tabName === 'history' ? tabHistoryBtn :
+                     tabName === 'instructions' ? tabInstructionsBtn : null;
+
+    if (activeBtn && typeof activeBtn.scrollIntoView === 'function') {
+        activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
 }
 
 // ==========================================================================

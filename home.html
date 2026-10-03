@@ -42,7 +42,30 @@
                 <span>Live Dashboard</span> <i class="fas fa-arrow-right"></i>
             </a>
         </div>
+
+        <!-- Mobile Navigation Menu Toggle Button -->
+        <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle Navigation Menu" onclick="toggleMobileNav()">
+            <i class="fas fa-bars" id="mobileNavIcon"></i>
+        </button>
     </header>
+
+    <!-- Mobile Slide-Down Navigation Menu -->
+    <div class="home-mobile-menu" id="homeMobileMenu">
+        <div class="mobile-menu-links">
+            <a href="#sensors" class="mobile-menu-item" onclick="toggleMobileNav()"><i class="fas fa-microchip"></i> <span>Sensors Suite</span></a>
+            <a href="#architecture" class="mobile-menu-item" onclick="toggleMobileNav()"><i class="fas fa-diagram-project"></i> <span>Architecture & Flow</span></a>
+            <a href="#simulator" class="mobile-menu-item" onclick="toggleMobileNav()"><i class="fas fa-sliders"></i> <span>Interactive Sandbox</span></a>
+            <a href="#setup" class="mobile-menu-item" onclick="toggleMobileNav()"><i class="fas fa-wifi"></i> <span>Wireless Pairing Guide</span></a>
+        </div>
+        <div class="mobile-menu-actions">
+            <a href="dashboard.html" class="btn-matte-primary mobile-btn-full" onclick="toggleMobileNav()">
+                <i class="fas fa-gauge-high"></i> <span>Launch Live Dashboard</span>
+            </a>
+            <button class="btn-matte-silver mobile-btn-full" id="mobileAuthBtn" onclick="signInWithGoogle()">
+                <i class="fab fa-google"></i> <span>Sign In with Google</span>
+            </button>
+        </div>
+    </div>
 
     <!-- Main Content Area -->
     <main>
@@ -757,6 +780,18 @@
                 if (badge) {
                     badge.className = 'sim-badge';
                     badge.innerHTML = `<i class="fas fa-circle-check"></i> <span>ALL SENSORS NORMAL &bull; SAFE PARAMETERS</span>`;
+                }
+            }
+        }
+
+        // Mobile Navigation Toggle
+        function toggleMobileNav() {
+            const menu = document.getElementById('homeMobileMenu');
+            const icon = document.getElementById('mobileNavIcon');
+            if (menu) {
+                menu.classList.toggle('open');
+                if (icon) {
+                    icon.className = menu.classList.contains('open') ? 'fas fa-xmark' : 'fas fa-bars';
                 }
             }
         }

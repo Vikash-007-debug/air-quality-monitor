@@ -72,13 +72,21 @@ auth.onAuthStateChanged((user) => {
         // On Home page: update navbar to show authenticated status & Dashboard CTA
         if (isHomePage) {
             const homeAuthBtn = document.getElementById("homeAuthBtn");
+            const mobileAuthBtn = document.getElementById("mobileAuthBtn");
+            const avatarHtml = `
+                <img src="${user.photoURL || 'https://ui-avatars.com/api/?name=User'}" class="user-avatar" style="width: 22px; height: 22px; margin-right: 6px;" alt="Avatar">
+                <span>Dashboard (${user.displayName ? user.displayName.split(' ')[0] : 'User'})</span>
+            `;
+
             if (homeAuthBtn) {
-                homeAuthBtn.innerHTML = `
-                    <img src="${user.photoURL || 'https://ui-avatars.com/api/?name=User'}" class="user-avatar" style="width: 24px; height: 24px; margin-right: 6px;" alt="Avatar">
-                    <span>Dashboard (${user.displayName ? user.displayName.split(' ')[0] : 'User'})</span>
-                `;
+                homeAuthBtn.innerHTML = avatarHtml;
                 homeAuthBtn.onclick = () => { window.location.href = "dashboard.html"; };
                 homeAuthBtn.className = "btn-matte-primary";
+            }
+            if (mobileAuthBtn) {
+                mobileAuthBtn.innerHTML = avatarHtml;
+                mobileAuthBtn.onclick = () => { window.location.href = "dashboard.html"; };
+                mobileAuthBtn.className = "btn-matte-primary mobile-btn-full";
             }
         }
 
