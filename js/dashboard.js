@@ -26,6 +26,7 @@ let isEmergencyActive = false;
 let isAudioMuted = false;
 let audioContext = null;
 let sirenInterval = null;
+let alertMasterGain = null;
 let lastEmailSentTimestamp = 0;
 const EMAIL_COOLDOWN_MS = 60 * 1000; // 60-second cooldown between auto-emails
 let isSimulationActive = false;
@@ -218,6 +219,61 @@ function updateBattery(percent) {
         else if (percent > 30) iconEl.className += 'fa-battery-half';
         else if (percent > 10) iconEl.className += 'fa-battery-quarter';
         else iconEl.className += 'fa-battery-empty';
+    }
+}
+
+/**
+ * Fully reset and purge the emergency state, audio sirens, strobe classes, and reset UI to safe baseline
+ */
+function resetEmergencyState() {
+    isEmergencyActive = false;
+    stopAudioAlert();
+
+    const body = document.getElementById('dashboardBody');
+    if (body) body.classList.remove('emergency-mode');
+
+    ['gasCard', 'tempCard', 'humidCard'].forEach(id => {
+        const card = document.getElementById(id);
+        if (card) card.classList.remove('emergency-blink', 'emergency-card');
+    });
+
+    const tempAlert = document.getElementById('tempAlertIndicator');
+    const humidAlert = document.getElementById('humidAlertIndicator');
+    const gasAlert = document.getElementById('gasAlertIndicator');
+    if (tempAlert) tempAlert.classList.remove('active');
+    if (humidAlert) humidAlert.classList.remove('active');
+    if (gasAlert) gasAlert.classList.remove('active');
+
+    const dispatchIcon = document.getElementById('dispatchIconBox');
+    if (dispatchIcon) dispatchIcon.classList.remove('active-alert');
+
+    const emailStatus = document.getElementById('emailDispatchStatus');
+    if (emailStatus && (emailStatus.textContent.includes('Dispatched') || emailStatus.textContent.includes('Dispatching'))) {
+        emailStatus.textContent = 'Ready & Listening';
+    }
+
+    const safetyStateEl = document.getElementById('statSafetyState');
+    if (safetyStateEl) {
+        safetyStateEl.textContent = 'OPTIMAL';
+        safetyStateEl.style.color = '#10b981';
+    }
+
+    const banner = document.getElementById('statusBanner');
+    const bannerMsg = document.getElementById('statusMessage');
+    const bannerHeadline = document.getElementById('bannerHeadline');
+    const bannerIcon = document.getElementById('bannerIcon');
+    if (banner && bannerMsg) {
+        if (isDeviceOnline) {
+            banner.className = 'status-banner success';
+            if (bannerHeadline) bannerHeadline.textContent = 'Telemetry Stream Active';
+            if (bannerIcon) bannerIcon.className = 'fas fa-circle-check';
+            bannerMsg.textContent = 'ESP32 is connected and actively streaming live sensor data.';
+        } else {
+            banner.className = 'status-banner warning';
+            if (bannerHeadline) bannerHeadline.textContent = 'Device Offline';
+            if (bannerIcon) bannerIcon.className = 'fas fa-power-off';
+            bannerMsg.textContent = 'ESP32 is powered off or disconnected. Gauges zeroed until device reconnects.';
+        }
     }
 }
 
@@ -415,11 +471,15 @@ function applyEmergencyState(state) {
     const humidCard = document.getElementById('humidCard');
     const banner = document.getElementById('statusBanner');
     const bannerMsg = document.getElementById('statusMessage');
+    const bannerHeadline = document.getElementById('bannerHeadline');
+    const bannerIcon = document.getElementById('bannerIcon');
     const safetyStateEl = document.getElementById('statSafetyState');
+
+    const wasAlreadyEmergency = isEmergencyActive;
 
     if (state.active) {
         isEmergencyActive = true;
-        body.classList.add('emergency-mode');
+        if (body) body.classList.add('emergency-mode');
 
         // Blink specific cards that breached thresholds
         if (gasCard) gasCard.classList.toggle('emergency-blink', state.gasAbnormal);
@@ -433,6 +493,8 @@ function applyEmergencyState(state) {
 
         if (banner && bannerMsg) {
             banner.className = 'status-banner danger';
+            if (bannerHeadline) bannerHeadline.textContent = 'Hazard Alert Active';
+            if (bannerIcon) bannerIcon.className = 'fas fa-triangle-exclamation';
             bannerMsg.innerHTML = `<strong>⚠️ EMERGENCY HAZARD:</strong> ${reasons.join(' & ')} detected!`;
         }
 
@@ -448,39 +510,15 @@ function applyEmergencyState(state) {
         // Start Web Audio Siren
         startAudioAlert();
 
-        // Dispatch Real Email Alert
-        triggerEmergencyEmailNotification(reasons.join(', '));
-
-        // Add to Incident Audit Ledger (if newly triggered)
-        recordIncidentEvent("EMERGENCY BREACH", reasons.join(', '), state.gasVal, state.tempVal, state.humidVal);
+        // Dispatch Real Email Alert and record Audit Event on initial emergency transition
+        if (!wasAlreadyEmergency) {
+            triggerEmergencyEmailNotification(reasons.join(', '));
+            const eventType = isSimulationActive ? "SIMULATION TEST" : "EMERGENCY BREACH";
+            recordIncidentEvent(eventType, reasons.join(', '), state.gasVal, state.tempVal, state.humidVal);
+        }
 
     } else {
-        isEmergencyActive = false;
-        body.classList.remove('emergency-mode');
-
-        if (gasCard) gasCard.classList.remove('emergency-blink');
-        if (tempCard) tempCard.classList.remove('emergency-blink');
-        if (humidCard) humidCard.classList.remove('emergency-blink');
-
-        const dispatchIcon = document.getElementById('dispatchIconBox');
-        if (dispatchIcon) dispatchIcon.classList.remove('active-alert');
-
-        const emailStatus = document.getElementById('emailDispatchStatus');
-        if (emailStatus && emailStatus.textContent.includes('Dispatched')) {
-            emailStatus.textContent = 'Ready & Listening';
-        }
-
-        stopAudioAlert();
-
-        if (banner && bannerMsg) {
-            banner.className = 'status-banner success';
-            bannerMsg.textContent = 'ESP32 telemetry stream is active and within safe thresholds.';
-        }
-
-        if (safetyStateEl) {
-            safetyStateEl.textContent = 'OPTIMAL';
-            safetyStateEl.style.color = '#10b981';
-        }
+        resetEmergencyState();
     }
 }
 
@@ -493,6 +531,16 @@ function startAudioAlert() {
     try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!audioContext) audioContext = new AudioContext();
+
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+
+        if (!alertMasterGain) {
+            alertMasterGain = audioContext.createGain();
+            alertMasterGain.connect(audioContext.destination);
+        }
+        alertMasterGain.gain.setValueAtTime(1.0, audioContext.currentTime);
 
         function playBeep() {
             if (isAudioMuted || !isEmergencyActive) return;
@@ -507,7 +555,7 @@ function startAudioAlert() {
             gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.35);
 
             osc.connect(gain);
-            gain.connect(audioContext.destination);
+            gain.connect(alertMasterGain);
 
             osc.start();
             osc.stop(audioContext.currentTime + 0.35);
@@ -524,6 +572,13 @@ function stopAudioAlert() {
     if (sirenInterval) {
         clearInterval(sirenInterval);
         sirenInterval = null;
+    }
+    if (alertMasterGain && audioContext) {
+        try {
+            alertMasterGain.gain.setValueAtTime(0, audioContext.currentTime);
+        } catch (e) {
+            // ignore
+        }
     }
 }
 
@@ -556,11 +611,6 @@ function toggleEmergencySimulation() {
             simBtn.innerHTML = '<i class="fas fa-stop"></i> <span>Stop Simulation</span>';
         }
 
-        // Push test hazardous sensor levels
-        updateGauge('gas', 2450, GAS_MIN, GAS_MAX);
-        updateGauge('temp', 42.5, TEMP_MIN, TEMP_MAX);
-        updateGauge('humid', 60.0, HUMID_MIN, HUMID_MAX);
-
         applyEmergencyState({
             active: true,
             gasAbnormal: true,
@@ -571,11 +621,19 @@ function toggleEmergencySimulation() {
             humidVal: 60.0
         });
 
+        // Push test hazardous sensor levels to gauges
+        updateGauge('gas', 2450, GAS_MIN, GAS_MAX);
+        updateGauge('temp', 42.5, TEMP_MIN, TEMP_MAX);
+        updateGauge('humid', 60.0, HUMID_MIN, HUMID_MAX);
+
     } else {
         if (simBtn) {
             simBtn.classList.remove('active');
             simBtn.innerHTML = '<i class="fas fa-bolt"></i> <span>Test Alert</span>';
         }
+
+        // Instantly shut off siren and purge emergency red theme
+        resetEmergencyState();
 
         // If ESP32 is online, resume live telemetry; otherwise zero all gauges
         if (isDeviceOnline && lastLivePayload) {
@@ -1085,7 +1143,7 @@ function recordIncidentEvent(eventType, detailMsg, gas, temp, humid) {
         temp: temp.toFixed(1),
         humid: humid.toFixed(1),
         battery: document.getElementById('batteryValue') ? document.getElementById('batteryValue').textContent : '92%',
-        action: `Email alert dispatched to ${recipient}`
+        action: eventType === 'SIMULATION TEST' ? `Simulation test alert triggered for ${recipient}` : `Email alert dispatched to ${recipient}`
     };
 
     incidentLedger.unshift(record);
@@ -1111,10 +1169,11 @@ function renderIncidentTable() {
 
     let rowsHtml = '';
     incidentLedger.forEach(row => {
+        const badgeClass = row.event === 'SIMULATION TEST' ? 'log-badge warning' : 'log-badge danger';
         rowsHtml += `
             <tr>
                 <td class="font-mono">${row.time}</td>
-                <td><span class="log-badge danger">${row.event}</span></td>
+                <td><span class="${badgeClass}">${row.event}</span></td>
                 <td class="font-mono"><b>${row.gas} PPM</b></td>
                 <td class="font-mono">${row.temp}°C</td>
                 <td class="font-mono">${row.humid}%</td>
