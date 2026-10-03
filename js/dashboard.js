@@ -371,6 +371,19 @@ function resetGaugesToZero() {
     if (statGas) statGas.innerHTML = `0 <small>PPM</small>`;
     if (statTemp) statTemp.innerHTML = `0.0 <small>°C</small>`;
     if (statHumid) statHumid.innerHTML = `0.0 <small>%</small>`;
+
+    if (telemetryBuffer.timestamps.length === 0) {
+        ['Gas', 'Temp', 'Humid'].forEach(s => {
+            const minEl = document.getElementById(`statMin${s}`);
+            const maxEl = document.getElementById(`statMax${s}`);
+            const avgEl = document.getElementById(`statAvg${s}`);
+            if (minEl) minEl.textContent = '--';
+            if (maxEl) maxEl.textContent = '--';
+            if (avgEl) avgEl.textContent = '--';
+        });
+        const label = document.getElementById('historyRangeLabel');
+        if (label) label.textContent = 'Device Offline — No Telemetry Logged';
+    }
 }
 
 function setConnectionStatus(isOnline, customMsg) {
@@ -913,30 +926,8 @@ function initCharts() {
         });
     }
 
-    // Seed initial baseline telemetry so history & live graphs immediately render
-    seedBaselineTelemetry();
+    // Update historical chart display with current session buffer (empty until ESP32 connects)
     updateHistoricalChartDisplay();
-}
-
-/**
- * Seed initial baseline telemetry for immediate waveform & statistics rendering
- */
-function seedBaselineTelemetry() {
-    if (telemetryBuffer.timestamps.length > 0) return;
-    const now = Date.now();
-    for (let i = 24; i >= 0; i--) {
-        const ptTime = new Date(now - (i * 2.5 * 60 * 1000));
-        const timeLabel = ptTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-        const baseTemp = 25.2 + Math.sin(i * 0.35) * 0.8;
-        const baseHumid = 53.5 + Math.cos(i * 0.28) * 2.0;
-        const baseGas = Math.round(425 + Math.sin(i * 0.45) * 28);
-        
-        telemetryBuffer.timestamps.push(timeLabel);
-        telemetryBuffer.temp.push(Number(baseTemp.toFixed(1)));
-        telemetryBuffer.humid.push(Number(baseHumid.toFixed(1)));
-        telemetryBuffer.gas.push(baseGas);
-    }
-    updateTelemetryStatistics();
 }
 
 /**
@@ -1061,9 +1052,13 @@ function setHistoryRange(range) {
 
     const label = document.getElementById('historyRangeLabel');
     if (label) {
-        if (range === '1h') label.textContent = 'Showing Last 1 Hour Window';
-        else if (range === '6h') label.textContent = 'Showing Last 6 Hours Window';
-        else label.textContent = 'Showing Full 24 Hours Archive';
+        if (telemetryBuffer.timestamps.length === 0) {
+            label.textContent = isDeviceOnline ? 'Waiting for incoming telemetry stream...' : 'Device Offline — No Telemetry Logged';
+        } else {
+            if (range === '1h') label.textContent = `Showing Last 1 Hour Window (${telemetryBuffer.timestamps.length} pts)`;
+            else if (range === '6h') label.textContent = `Showing Last 6 Hours Window (${telemetryBuffer.timestamps.length} pts)`;
+            else label.textContent = `Showing Full 24 Hours Archive (${telemetryBuffer.timestamps.length} pts)`;
+        }
     }
 
     if (historicalChartInstance) {
@@ -1084,6 +1079,11 @@ function updateHistoricalChartDisplay() {
     historicalChartInstance.data.datasets[1].data = telemetryBuffer.humid.slice(-pointsToShow);
     historicalChartInstance.data.datasets[2].data = telemetryBuffer.gas.slice(-pointsToShow);
     historicalChartInstance.update();
+
+    const label = document.getElementById('historyRangeLabel');
+    if (label && telemetryBuffer.timestamps.length === 0) {
+        label.textContent = isDeviceOnline ? 'Waiting for incoming telemetry stream...' : 'Device Offline — No Telemetry Logged';
+    }
 }
 
 function clearHistoryLog() {
@@ -1120,6 +1120,20 @@ function clearHistoryLog() {
         historicalChartInstance.data.datasets.forEach(d => d.data = []);
         historicalChartInstance.update();
     }
+
+    const label = document.getElementById('historyRangeLabel');
+    if (label) {
+        label.textContent = isDeviceOnline ? 'Waiting for incoming telemetry stream...' : 'Device Offline — No Telemetry Logged';
+    }
+
+    ['Gas', 'Temp', 'Humid'].forEach(s => {
+        const minEl = document.getElementById(`statMin${s}`);
+        const maxEl = document.getElementById(`statMax${s}`);
+        const avgEl = document.getElementById(`statAvg${s}`);
+        if (minEl) minEl.textContent = '--';
+        if (maxEl) maxEl.textContent = '--';
+        if (avgEl) avgEl.textContent = '--';
+    });
 }
 
 // ==========================================================================
