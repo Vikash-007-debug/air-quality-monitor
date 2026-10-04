@@ -247,8 +247,8 @@ function renderPowerTilesOffline() {
         bar.style.width = '0%';
         bar.style.background = '#475569';
     }
-    if (valueEl) valueEl.textContent = '0%';
-    if (voltageEl) voltageEl.textContent = '0.00V';
+    if (valueEl) valueEl.textContent = '';
+    if (voltageEl) voltageEl.textContent = '0.00V (Offline)';
     if (labelEl) labelEl.textContent = 'Power Source & Status';
     if (noteEl) noteEl.style.display = 'none';
 }
@@ -276,48 +276,10 @@ function updateBattery(rawBatt, rawVolt) {
         return;
     }
 
-    let percent = 0;
-    let voltage = 0;
-    let is5VRail = false;
-
-    // 2. Sanitize incoming values
-    let num = Number(rawBatt);
-    if (isNaN(num)) num = 0;
-
+    let voltage = 5.00;
     let volt = Number(rawVolt);
-    if (isNaN(volt)) volt = 0;
-
-    if (volt > 0) {
+    if (!isNaN(volt) && volt > 0) {
         voltage = volt;
-        if (voltage >= 4.5) {
-            is5VRail = true;
-            percent = 100;
-        } else {
-            percent = Math.max(0, Math.min(100, ((voltage - 3.0) / 1.2) * 100));
-        }
-    } else if (num > 0 && num <= 5.0) {
-        voltage = num;
-        if (voltage >= 4.5) {
-            is5VRail = true;
-            percent = 100;
-        } else {
-            percent = Math.max(0, Math.min(100, ((voltage - 3.0) / 1.2) * 100));
-        }
-    } else {
-        percent = Math.max(0, Math.min(100, num));
-        if (percent === 100 && (volt >= 4.5 || volt === 0)) {
-            is5VRail = true;
-            voltage = 5.00;
-        } else {
-            voltage = Number((3.00 + (percent / 100) * 1.20).toFixed(2));
-        }
-    }
-
-    // Fallback: If device is active but readings are 0, device is powered via 5V rail
-    if (percent === 0 && voltage <= 0) {
-        is5VRail = true;
-        percent = 100;
-        voltage = 5.00;
     }
 
     // If reading is physically a Li-ion cell range (3.0V - 4.4V), force battery source
@@ -327,7 +289,7 @@ function updateBattery(rawBatt, rawVolt) {
 
     const isBattery = (currentPowerSource === 'battery');
 
-    // 3. Render Glowing vs Dimmed State
+    // 2. Render Glowing vs Dimmed State
     if (isBattery) {
         // --- BATTERY MODE (Emerald Green Glow) ---
         if (tileBattery) {
@@ -340,49 +302,24 @@ function updateBattery(rawBatt, rawVolt) {
             iconBox.className = 'info-icon battery-icon glow-battery';
         }
         if (iconEl) {
-            if (is5VRail || percent > 80) {
-                iconEl.className = 'fas fa-battery-full';
-            } else if (percent > 55) {
-                iconEl.className = 'fas fa-battery-three-quarters';
-            } else if (percent > 30) {
-                iconEl.className = 'fas fa-battery-half';
-            } else if (percent > 10) {
-                iconEl.className = 'fas fa-battery-quarter';
-            } else {
-                iconEl.className = 'fas fa-battery-empty';
-            }
+            iconEl.className = 'fas fa-battery-full';
             iconEl.style.color = 'var(--accent-emerald, #10b981)';
         }
         if (labelEl) {
-            labelEl.textContent = is5VRail ? 'Power Source: Battery (5V Rail)' : 'Power Source: Battery (18650 Li-ion)';
+            labelEl.textContent = 'Power Source: Battery';
         }
         if (voltageEl) {
-            voltageEl.textContent = is5VRail ? '5.00V (5V Rail)' : `${voltage.toFixed(2)}V`;
+            voltageEl.textContent = voltage >= 4.5 ? '5.00V (Battery Rail)' : `${voltage.toFixed(2)}V (Battery)`;
         }
         if (valueEl) {
-            if (is5VRail) {
-                valueEl.innerHTML = `100% <small style="font-size:11px; color:var(--accent-emerald,#10b981); font-weight:600;">(Active)</small>`;
-            } else {
-                valueEl.textContent = `${Math.round(percent)}%`;
-            }
+            valueEl.textContent = '';
         }
         if (bar) {
-            bar.style.width = percent + '%';
-            if (is5VRail || percent > 60) {
-                bar.style.background = 'linear-gradient(90deg, #10b981, #06b6d4)';
-            } else if (percent > 25) {
-                bar.style.background = 'linear-gradient(90deg, #f59e0b, #f97316)';
-            } else {
-                bar.style.background = 'linear-gradient(90deg, #ef4444, #f97316)';
-            }
+            bar.style.display = 'none';
         }
         if (noteEl) {
             noteEl.style.display = 'block';
-            if (is5VRail) {
-                noteEl.innerHTML = '<i class="fas fa-circle-info"></i> Running on 18650 Battery System (5V Boosted Rail). Connect 18650(+) divider to GPIO 35 for live cell drainage %';
-            } else {
-                noteEl.innerHTML = `<i class="fas fa-check-circle" style="color:var(--accent-emerald,#10b981);"></i> Live 18650 cell monitoring active (${voltage.toFixed(2)}V)`;
-            }
+            noteEl.innerHTML = '<i class="fas fa-check-circle" style="color:var(--accent-emerald,#10b981);"></i> Running on 18650 Portable Battery System';
         }
     } else {
         // --- USB MODE (Electric Cyan Glow) ---
@@ -403,18 +340,17 @@ function updateBattery(rawBatt, rawVolt) {
             labelEl.textContent = 'Power Source: USB / Mains';
         }
         if (voltageEl) {
-            voltageEl.textContent = '5.00V (USB VBUS)';
+            voltageEl.textContent = '5.00V (USB Supply)';
         }
         if (valueEl) {
-            valueEl.innerHTML = `100% <small style="font-size:11px; color:var(--accent-cyan,#06b6d4); font-weight:600;">(Continuous)</small>`;
+            valueEl.textContent = '';
         }
         if (bar) {
-            bar.style.width = '100%';
-            bar.style.background = 'linear-gradient(90deg, #06b6d4, #3b82f6)';
+            bar.style.display = 'none';
         }
         if (noteEl) {
             noteEl.style.display = 'block';
-            noteEl.innerHTML = '<i class="fas fa-bolt" style="color:var(--accent-cyan,#06b6d4);"></i> Running on USB / Mains continuous power supply';
+            noteEl.innerHTML = '<i class="fas fa-bolt" style="color:var(--accent-cyan,#06b6d4);"></i> Running on USB Continuous Power Supply';
         }
     }
 }

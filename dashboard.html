@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <link rel="stylesheet" href="css/style.css?v=2.7">
+    <link rel="stylesheet" href="css/style.css?v=2.8">
 </head>
 <body class="dashboard-page theme-silver" id="dashboardBody">
     <!-- Interactive Silver PCB Trace Canvas (Highlights Under Cursor) -->
@@ -333,14 +333,10 @@
                             </button>
                         </div>
 
-                        <div class="battery-bar-container">
-                            <div class="battery-bar" id="batteryBar" style="width: 0%"></div>
+                        <div class="power-rail-row" style="margin-top: 4px;">
+                            <span class="info-value font-mono" id="batteryVoltage">5.00V (Battery Rail)</span>
                         </div>
-                        <div class="info-flex-row">
-                            <span class="info-value font-mono" id="batteryValue">0%</span>
-                            <span class="info-subtext font-mono" id="batteryVoltage">0.00V</span>
-                        </div>
-                        <span class="battery-status-note" id="batteryStatusNote" style="display:none; font-size:10.5px; color:#94a3b8; margin-top:5px; line-height:1.4;"></span>
+                        <span class="battery-status-note" id="batteryStatusNote" style="display:none; font-size:10.5px; color:#94a3b8; margin-top:4px; line-height:1.4;"></span>
                     </div>
                 </div>
 
@@ -636,7 +632,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
     <script src="js/firebase-config.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/pcb-canvas.js?v=2.7"></script>
-    <script src="js/dashboard.js?v=2.7"></script>
+    <script src="js/pcb-canvas.js?v=2.8"></script>
+    <script src="js/dashboard.js?v=2.8"></script>
 </body>
 </html>

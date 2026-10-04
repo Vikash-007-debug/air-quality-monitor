@@ -1080,6 +1080,20 @@ body.emergency-mode .emergency-dispatch-icon,
     align-items: flex-start;
 }
 
+.power-rail-row {
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.power-rail-row .info-value {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+}
+
 /* ==========================================================================
    DUAL POWER SOURCE TILES (BATTERY & USB)
    ========================================================================== */
