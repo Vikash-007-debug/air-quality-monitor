@@ -592,8 +592,14 @@ function applyEmergencyState(state) {
 }
 
 // ==========================================================================
-// EMERGENCY AUDIO ALARM & MUTE TOGGLE (Uses uploaded alert.mp3)
 // ==========================================================================
+// EMERGENCY AUDIO ALARM & MUTE TOGGLE (Synchronized with alert.mp3)
+// Exact measured loop period: 2.0049s (4 repeats in 8.0196s file)
+// Triple beep envelope peaks at: +0.32s, +0.40s, +0.48s
+// ==========================================================================
+const ALERT_CYCLE_SECONDS = 2.0049;
+let alertAudioBound = false;
+
 function getAlertAudio() {
     if (!alertAudio) {
         const domAudio = document.getElementById('emergencyAudio');
@@ -604,7 +610,26 @@ function getAlertAudio() {
         }
         alertAudio.loop = true;
     }
+    if (!alertAudioBound && alertAudio) {
+        alertAudioBound = true;
+        const handleSync = () => {
+            if (isEmergencyActive) {
+                syncEmergencyAnimationPhase(alertAudio);
+            }
+        };
+        alertAudio.addEventListener('playing', handleSync);
+        alertAudio.addEventListener('timeupdate', handleSync);
+        alertAudio.addEventListener('seeked', handleSync);
+    }
     return alertAudio;
+}
+
+function syncEmergencyAnimationPhase(audioEl) {
+    if (!audioEl) return;
+    const curTime = audioEl.currentTime || 0;
+    // Calculate negative offset so CSS animation phase matches audio.currentTime exactly
+    const phaseOffset = -(curTime % ALERT_CYCLE_SECONDS);
+    document.documentElement.style.setProperty('--alert-phase-offset', `${phaseOffset.toFixed(3)}s`);
 }
 
 function startAudioAlert() {
@@ -615,10 +640,18 @@ function startAudioAlert() {
         if (audio) {
             audio.loop = true;
             audio.muted = false;
+
+            // If audio is paused or just starting, rewind to 0 to align with initial visual flash
+            if (audio.paused || audio.currentTime === 0 || audio.ended) {
+                audio.currentTime = 0;
+                document.documentElement.style.setProperty('--alert-phase-offset', '0s');
+            }
+
             const playPromise = audio.play();
             if (playPromise !== undefined) {
                 playPromise.then(() => {
                     stopFallbackWebAudioSiren();
+                    syncEmergencyAnimationPhase(audio);
                 }).catch(err => {
                     console.warn("Audio autoplay blocked by browser policy, using fallback siren:", err);
                     playFallbackWebAudioSiren();
@@ -643,6 +676,7 @@ function stopAudioAlert() {
     } catch (e) {
         // ignore
     }
+    document.documentElement.style.setProperty('--alert-phase-offset', '0s');
     stopFallbackWebAudioSiren();
 }
 
@@ -687,32 +721,39 @@ function playFallbackWebAudioSiren() {
             fallbackMasterGain = fallbackAudioContext.createGain();
             fallbackMasterGain.connect(fallbackAudioContext.destination);
         }
-        fallbackMasterGain.gain.setValueAtTime(0.2, fallbackAudioContext.currentTime);
+        fallbackMasterGain.gain.setValueAtTime(0.25, fallbackAudioContext.currentTime);
 
-        function playBeep() {
+        function playTripleBeep() {
             if (isAudioMuted || !isEmergencyActive) return;
             if (fallbackAudioContext && fallbackAudioContext.state === 'suspended') {
                 fallbackAudioContext.resume().catch(() => {});
             }
-            const osc = fallbackAudioContext.createOscillator();
-            const gain = fallbackAudioContext.createGain();
 
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(880, fallbackAudioContext.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(440, fallbackAudioContext.currentTime + 0.35);
+            const now = fallbackAudioContext.currentTime;
+            // 3 synchronized beeps matching alert.mp3 at +0.32s, +0.40s, +0.48s with ~1300Hz tone
+            const beepOffsets = [0.32, 0.40, 0.48];
+            beepOffsets.forEach(offset => {
+                const osc = fallbackAudioContext.createOscillator();
+                const gain = fallbackAudioContext.createGain();
 
-            gain.gain.setValueAtTime(0.18, fallbackAudioContext.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, fallbackAudioContext.currentTime + 0.35);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(1300, now + offset);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + offset + 0.06);
 
-            osc.connect(gain);
-            gain.connect(fallbackMasterGain);
+                gain.gain.setValueAtTime(0.001, now + offset);
+                gain.gain.linearRampToValueAtTime(0.22, now + offset + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.065);
 
-            osc.start();
-            osc.stop(fallbackAudioContext.currentTime + 0.35);
+                osc.connect(gain);
+                gain.connect(fallbackMasterGain);
+
+                osc.start(now + offset);
+                osc.stop(now + offset + 0.07);
+            });
         }
 
-        playBeep();
-        fallbackSirenInterval = setInterval(playBeep, 1200);
+        playTripleBeep();
+        fallbackSirenInterval = setInterval(playTripleBeep, 2005);
     } catch (e) {
         console.warn("Audio Context init note:", e);
     }

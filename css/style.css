@@ -43,6 +43,8 @@
     --emergency-crimson: #ff1744;
     --emergency-glow: rgba(255, 23, 68, 0.85);
     --emergency-border: rgba(255, 23, 68, 0.65);
+    --alert-cycle: 2.005s;
+    --alert-phase-offset: 0s;
 }
 
 /* ---------- Global Reset & Base ---------- */
@@ -107,12 +109,35 @@ body.emergency-mode {
     background-size: 100% 1200px !important;
     background-attachment: scroll !important;
     box-shadow: inset 0 0 140px rgba(255, 23, 68, 0.45) !important;
-    animation: screenStrobeVignette 2s ease-in-out infinite alternate;
+    animation: screenStrobeVignette var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 @keyframes screenStrobeVignette {
-    0% { box-shadow: inset 0 0 100px rgba(255, 23, 68, 0.35); }
-    100% { box-shadow: inset 0 0 170px rgba(255, 23, 68, 0.65); }
+    0%, 13% {
+        box-shadow: inset 0 0 90px rgba(255, 23, 68, 0.30);
+    }
+    17% {
+        box-shadow: inset 0 0 180px rgba(255, 23, 68, 0.78), inset 0 0 40px rgba(255, 23, 68, 0.3);
+    }
+    19% {
+        box-shadow: inset 0 0 110px rgba(255, 23, 68, 0.45);
+    }
+    21% {
+        box-shadow: inset 0 0 195px rgba(255, 23, 68, 0.85), inset 0 0 50px rgba(255, 23, 68, 0.35);
+    }
+    23% {
+        box-shadow: inset 0 0 120px rgba(255, 23, 68, 0.50);
+    }
+    25% {
+        box-shadow: inset 0 0 220px rgba(255, 23, 68, 0.95), inset 0 0 70px rgba(255, 255, 255, 0.25);
+    }
+    32% {
+        box-shadow: inset 0 0 140px rgba(255, 23, 68, 0.55);
+    }
+    42%, 100% {
+        box-shadow: inset 0 0 90px rgba(255, 23, 68, 0.30);
+    }
 }
 
 body.emergency-mode .navbar {
@@ -124,6 +149,8 @@ body.emergency-mode .navbar {
 body.emergency-mode .brand-logo-hex {
     background: linear-gradient(135deg, #b91c1c, #ff1744) !important;
     box-shadow: 0 0 20px var(--emergency-glow) !important;
+    animation: simPulse var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 body.emergency-mode .brand-highlight {
@@ -143,7 +170,8 @@ body.emergency-mode .brand-highlight {
     position: sticky;
     top: 0;
     z-index: 1000;
-    animation: emergencyBarPulse 1.2s infinite alternate;
+    animation: emergencyBarPulse var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 body.emergency-mode .emergency-bar {
@@ -151,8 +179,38 @@ body.emergency-mode .emergency-bar {
 }
 
 @keyframes emergencyBarPulse {
-    0% { background: linear-gradient(90deg, #7f1d1d, #ef4444, #7f1d1d); }
-    100% { background: linear-gradient(90deg, #b91c1c, #ff1744, #b91c1c); }
+    0%, 13% {
+        background: linear-gradient(90deg, #4c070e 0%, #881320 50%, #4c070e 100%);
+        box-shadow: 0 4px 18px rgba(220, 38, 38, 0.45);
+    }
+    17% {
+        background: linear-gradient(90deg, #881320 0%, #ff1744 50%, #881320 100%);
+        box-shadow: 0 4px 35px rgba(255, 23, 68, 0.9), 0 0 20px #ff1744;
+    }
+    19% {
+        background: linear-gradient(90deg, #590912 0%, #b91c1c 50%, #590912 100%);
+        box-shadow: 0 4px 22px rgba(220, 38, 38, 0.6);
+    }
+    21% {
+        background: linear-gradient(90deg, #991b1b 0%, #ff1744 50%, #991b1b 100%);
+        box-shadow: 0 4px 42px rgba(255, 23, 68, 0.95), 0 0 25px #ff1744;
+    }
+    23% {
+        background: linear-gradient(90deg, #590912 0%, #b91c1c 50%, #590912 100%);
+        box-shadow: 0 4px 24px rgba(220, 38, 38, 0.65);
+    }
+    25% {
+        background: linear-gradient(90deg, #b91c1c 0%, #ff2d55 50%, #b91c1c 100%);
+        box-shadow: 0 4px 50px rgba(255, 23, 68, 1), 0 0 35px #ffffff;
+    }
+    32% {
+        background: linear-gradient(90deg, #700f1a 0%, #dc2626 50%, #700f1a 100%);
+        box-shadow: 0 4px 28px rgba(220, 38, 38, 0.7);
+    }
+    42%, 100% {
+        background: linear-gradient(90deg, #4c070e 0%, #881320 50%, #4c070e 100%);
+        box-shadow: 0 4px 18px rgba(220, 38, 38, 0.45);
+    }
 }
 
 .emergency-content {
@@ -168,12 +226,51 @@ body.emergency-mode .emergency-bar {
 .emergency-siren {
     font-size: 24px;
     color: #fff;
-    animation: sirenStrobe 0.5s infinite alternate;
+    animation: sirenStrobe var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 @keyframes sirenStrobe {
-    0% { transform: scale(1); filter: drop-shadow(0 0 4px #fff); }
-    100% { transform: scale(1.25); filter: drop-shadow(0 0 16px #fff); }
+    0%, 13% {
+        transform: scale(1) rotate(0deg);
+        filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.35));
+        opacity: 0.88;
+    }
+    17% {
+        transform: scale(1.24) rotate(-8deg);
+        filter: drop-shadow(0 0 20px #ff1744) drop-shadow(0 0 28px #fff);
+        opacity: 1;
+    }
+    19% {
+        transform: scale(1.08) rotate(0deg);
+        filter: drop-shadow(0 0 8px #ff1744);
+        opacity: 0.92;
+    }
+    21% {
+        transform: scale(1.30) rotate(8deg);
+        filter: drop-shadow(0 0 24px #ff1744) drop-shadow(0 0 32px #fff);
+        opacity: 1;
+    }
+    23% {
+        transform: scale(1.10) rotate(0deg);
+        filter: drop-shadow(0 0 10px #ff1744);
+        opacity: 0.92;
+    }
+    25% {
+        transform: scale(1.38) rotate(-6deg);
+        filter: drop-shadow(0 0 30px #ff1744) drop-shadow(0 0 40px #fff);
+        opacity: 1;
+    }
+    32% {
+        transform: scale(1.12) rotate(0deg);
+        filter: drop-shadow(0 0 12px #ff1744);
+        opacity: 0.95;
+    }
+    42%, 100% {
+        transform: scale(1) rotate(0deg);
+        filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.35));
+        opacity: 0.88;
+    }
 }
 
 .emergency-text-group {
@@ -377,12 +474,43 @@ body.emergency-mode .emergency-bar {
     background: var(--emergency-crimson);
     color: #ffffff;
     border-color: #ff8095;
-    animation: simPulse 1s infinite alternate;
+    animation: simPulse var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 @keyframes simPulse {
-    0% { box-shadow: 0 0 6px var(--emergency-glow); }
-    100% { box-shadow: 0 0 20px var(--emergency-glow); }
+    0%, 13% {
+        box-shadow: 0 0 6px var(--emergency-glow);
+        transform: scale(1);
+    }
+    17% {
+        box-shadow: 0 0 22px var(--emergency-glow), 0 0 8px #fff;
+        transform: scale(1.05);
+    }
+    19% {
+        box-shadow: 0 0 10px var(--emergency-glow);
+        transform: scale(1.01);
+    }
+    21% {
+        box-shadow: 0 0 25px var(--emergency-glow), 0 0 10px #fff;
+        transform: scale(1.06);
+    }
+    23% {
+        box-shadow: 0 0 12px var(--emergency-glow);
+        transform: scale(1.02);
+    }
+    25% {
+        box-shadow: 0 0 32px var(--emergency-glow), 0 0 16px #fff;
+        transform: scale(1.08);
+    }
+    32% {
+        box-shadow: 0 0 14px var(--emergency-glow);
+        transform: scale(1.02);
+    }
+    42%, 100% {
+        box-shadow: 0 0 6px var(--emergency-glow);
+        transform: scale(1);
+    }
 }
 
 .connection-status {
@@ -532,12 +660,51 @@ body.emergency-mode .emergency-bar {
 body.emergency-mode .status-banner {
     border-color: rgba(255, 23, 68, 0.6) !important;
     background: rgba(255, 23, 68, 0.12) !important;
+    animation: emergencyBannerGlow var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
+}
+
+@keyframes emergencyBannerGlow {
+    0%, 13% {
+        border-color: rgba(255, 23, 68, 0.45);
+        box-shadow: 0 0 10px rgba(255, 23, 68, 0.15);
+    }
+    17% {
+        border-color: rgba(255, 23, 68, 0.95);
+        box-shadow: 0 0 28px rgba(255, 23, 68, 0.6);
+    }
+    19% {
+        border-color: rgba(255, 23, 68, 0.55);
+        box-shadow: 0 0 14px rgba(255, 23, 68, 0.25);
+    }
+    21% {
+        border-color: rgba(255, 23, 68, 1);
+        box-shadow: 0 0 35px rgba(255, 23, 68, 0.75);
+    }
+    23% {
+        border-color: rgba(255, 23, 68, 0.60);
+        box-shadow: 0 0 16px rgba(255, 23, 68, 0.3);
+    }
+    25% {
+        border-color: #ff2d55;
+        box-shadow: 0 0 45px rgba(255, 23, 68, 0.9), 0 0 15px rgba(255, 255, 255, 0.4);
+    }
+    32% {
+        border-color: rgba(255, 23, 68, 0.7);
+        box-shadow: 0 0 20px rgba(255, 23, 68, 0.4);
+    }
+    42%, 100% {
+        border-color: rgba(255, 23, 68, 0.45);
+        box-shadow: 0 0 10px rgba(255, 23, 68, 0.15);
+    }
 }
 
 .status-banner.danger .banner-icon-box,
 body.emergency-mode .banner-icon-box {
     color: var(--emergency-crimson) !important;
     background: rgba(255, 23, 68, 0.2) !important;
+    animation: sirenStrobe var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 /* ==========================================================================
@@ -786,20 +953,51 @@ body.emergency-mode .banner-icon-box {
 .gauge-card.emergency-blink {
     border-color: var(--emergency-crimson) !important;
     background: linear-gradient(145deg, #26050b 0%, #120205 100%) !important;
-    animation: emergencyCardPulse 0.8s ease-in-out infinite alternate !important;
+    animation: emergencyCardPulse var(--alert-cycle, 2.005s) ease-out infinite !important;
+    animation-delay: var(--alert-phase-offset, 0s) !important;
     z-index: 10;
 }
 
 @keyframes emergencyCardPulse {
-    0% {
+    0%, 13% {
+        border-color: rgba(239, 68, 68, 0.6);
+        box-shadow: 0 0 18px rgba(255, 23, 68, 0.35), inset 0 0 15px rgba(255, 23, 68, 0.15);
+        transform: translateY(-2px) scale(1.01);
+    }
+    17% {
+        border-color: #ff1744;
+        box-shadow: 0 0 42px rgba(255, 23, 68, 0.85), inset 0 0 32px rgba(255, 23, 68, 0.35);
+        transform: translateY(-5px) scale(1.03);
+    }
+    19% {
+        border-color: rgba(239, 68, 68, 0.7);
+        box-shadow: 0 0 24px rgba(255, 23, 68, 0.5), inset 0 0 20px rgba(255, 23, 68, 0.2);
+        transform: translateY(-3px) scale(1.015);
+    }
+    21% {
+        border-color: #ff1744;
+        box-shadow: 0 0 50px rgba(255, 23, 68, 0.92), inset 0 0 38px rgba(255, 23, 68, 0.4);
+        transform: translateY(-6px) scale(1.036);
+    }
+    23% {
+        border-color: rgba(239, 68, 68, 0.75);
+        box-shadow: 0 0 26px rgba(255, 23, 68, 0.55), inset 0 0 22px rgba(255, 23, 68, 0.22);
+        transform: translateY(-3px) scale(1.018);
+    }
+    25% {
+        border-color: #ff2d55;
+        box-shadow: 0 0 65px rgba(255, 23, 68, 1), inset 0 0 48px rgba(255, 23, 68, 0.52);
+        transform: translateY(-7px) scale(1.042);
+    }
+    32% {
         border-color: #ef4444;
-        box-shadow: 0 0 20px rgba(255, 23, 68, 0.5), inset 0 0 20px rgba(255, 23, 68, 0.2);
+        box-shadow: 0 0 30px rgba(255, 23, 68, 0.65), inset 0 0 24px rgba(255, 23, 68, 0.25);
         transform: translateY(-4px) scale(1.02);
     }
-    100% {
-        border-color: #ff1744;
-        box-shadow: 0 0 50px rgba(255, 23, 68, 0.9), inset 0 0 35px rgba(255, 23, 68, 0.4);
-        transform: translateY(-4px) scale(1.035);
+    42%, 100% {
+        border-color: rgba(239, 68, 68, 0.6);
+        box-shadow: 0 0 18px rgba(255, 23, 68, 0.35), inset 0 0 15px rgba(255, 23, 68, 0.15);
+        transform: translateY(-2px) scale(1.01);
     }
 }
 
@@ -807,12 +1005,51 @@ body.emergency-mode .banner-icon-box {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    animation: alertStrobe 0.5s infinite alternate;
+    animation: alertStrobe var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 @keyframes alertStrobe {
-    0% { opacity: 0.6; transform: scale(0.96); }
-    100% { opacity: 1; transform: scale(1.04); }
+    0%, 13% {
+        opacity: 0.65;
+        transform: scale(0.96);
+        box-shadow: 0 0 6px rgba(255, 23, 68, 0.3);
+    }
+    17% {
+        opacity: 1;
+        transform: scale(1.08);
+        box-shadow: 0 0 20px rgba(255, 23, 68, 0.9);
+    }
+    19% {
+        opacity: 0.75;
+        transform: scale(1.0);
+        box-shadow: 0 0 8px rgba(255, 23, 68, 0.4);
+    }
+    21% {
+        opacity: 1;
+        transform: scale(1.11);
+        box-shadow: 0 0 24px rgba(255, 23, 68, 0.95);
+    }
+    23% {
+        opacity: 0.8;
+        transform: scale(1.01);
+        box-shadow: 0 0 10px rgba(255, 23, 68, 0.45);
+    }
+    25% {
+        opacity: 1;
+        transform: scale(1.15);
+        box-shadow: 0 0 30px rgba(255, 23, 68, 1), 0 0 8px #ffffff;
+    }
+    32% {
+        opacity: 0.85;
+        transform: scale(1.03);
+        box-shadow: 0 0 14px rgba(255, 23, 68, 0.55);
+    }
+    42%, 100% {
+        opacity: 0.65;
+        transform: scale(0.96);
+        box-shadow: 0 0 6px rgba(255, 23, 68, 0.3);
+    }
 }
 
 .gauge-card.emergency-blink .gauge-needle {
@@ -831,7 +1068,8 @@ body.emergency-mode .banner-icon-box {
     fill: var(--emergency-crimson) !important;
     text-shadow: 0 0 20px rgba(255, 23, 68, 0.8);
     filter: drop-shadow(0 0 10px rgba(255, 23, 68, 0.9)) !important;
-    animation: textEmergencyStrobe 0.8s infinite alternate;
+    animation: textEmergencyStrobe var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 .gauge-card.emergency-blink .gauge-display-plate {
@@ -845,8 +1083,46 @@ body.emergency-mode .banner-icon-box {
 }
 
 @keyframes textEmergencyStrobe {
-    0% { opacity: 0.85; transform: scale(1); }
-    100% { opacity: 1; transform: scale(1.05); }
+    0%, 13% {
+        opacity: 0.82;
+        transform: scale(1);
+        text-shadow: 0 0 12px rgba(255, 23, 68, 0.6);
+    }
+    17% {
+        opacity: 1;
+        transform: scale(1.07);
+        text-shadow: 0 0 28px rgba(255, 23, 68, 1), 0 0 12px #ffffff;
+    }
+    19% {
+        opacity: 0.88;
+        transform: scale(1.02);
+        text-shadow: 0 0 16px rgba(255, 23, 68, 0.7);
+    }
+    21% {
+        opacity: 1;
+        transform: scale(1.09);
+        text-shadow: 0 0 32px rgba(255, 23, 68, 1), 0 0 15px #ffffff;
+    }
+    23% {
+        opacity: 0.90;
+        transform: scale(1.03);
+        text-shadow: 0 0 18px rgba(255, 23, 68, 0.75);
+    }
+    25% {
+        opacity: 1;
+        transform: scale(1.13);
+        text-shadow: 0 0 40px rgba(255, 23, 68, 1), 0 0 20px #ffffff;
+    }
+    32% {
+        opacity: 0.92;
+        transform: scale(1.04);
+        text-shadow: 0 0 20px rgba(255, 23, 68, 0.8);
+    }
+    42%, 100% {
+        opacity: 0.82;
+        transform: scale(1);
+        text-shadow: 0 0 12px rgba(255, 23, 68, 0.6);
+    }
 }
 
 /* ==========================================================================
@@ -908,7 +1184,8 @@ body.emergency-mode .emergency-dispatch-icon,
     background: linear-gradient(135deg, #b91c1c, #ff1744) !important;
     border-color: #ff8095 !important;
     box-shadow: 0 0 24px var(--emergency-glow) !important;
-    animation: sirenStrobe 0.8s infinite alternate !important;
+    animation: sirenStrobe var(--alert-cycle, 2.005s) ease-out infinite !important;
+    animation-delay: var(--alert-phase-offset, 0s) !important;
 }
 
 .info-details {
@@ -1572,7 +1849,8 @@ body.emergency-mode .emergency-dispatch-icon,
 .email-toast i {
     font-size: 26px;
     color: var(--emergency-crimson);
-    animation: sirenStrobe 0.6s infinite alternate;
+    animation: sirenStrobe var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 .toast-text strong {
@@ -2372,6 +2650,43 @@ button, a, input[type="range"] {
     border-color: var(--emergency-crimson) !important;
     background: linear-gradient(145deg, #26050b 0%, #100204 100%) !important;
     box-shadow: 0 0 50px rgba(255, 23, 68, 0.5), inset 0 0 30px rgba(255, 23, 68, 0.2) !important;
+    animation: simBoxEmergencyPulse var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
+}
+
+@keyframes simBoxEmergencyPulse {
+    0%, 13% {
+        border-color: var(--emergency-crimson);
+        box-shadow: 0 0 35px rgba(255, 23, 68, 0.35), inset 0 0 20px rgba(255, 23, 68, 0.15);
+    }
+    17% {
+        border-color: #ff2d55;
+        box-shadow: 0 0 65px rgba(255, 23, 68, 0.8), inset 0 0 35px rgba(255, 23, 68, 0.35);
+    }
+    19% {
+        border-color: var(--emergency-crimson);
+        box-shadow: 0 0 42px rgba(255, 23, 68, 0.45), inset 0 0 24px rgba(255, 23, 68, 0.2);
+    }
+    21% {
+        border-color: #ff2d55;
+        box-shadow: 0 0 75px rgba(255, 23, 68, 0.9), inset 0 0 40px rgba(255, 23, 68, 0.4);
+    }
+    23% {
+        border-color: var(--emergency-crimson);
+        box-shadow: 0 0 45px rgba(255, 23, 68, 0.5), inset 0 0 26px rgba(255, 23, 68, 0.22);
+    }
+    25% {
+        border-color: #ff2d55;
+        box-shadow: 0 0 90px rgba(255, 23, 68, 1), inset 0 0 50px rgba(255, 23, 68, 0.45);
+    }
+    32% {
+        border-color: var(--emergency-crimson);
+        box-shadow: 0 0 50px rgba(255, 23, 68, 0.6), inset 0 0 28px rgba(255, 23, 68, 0.25);
+    }
+    42%, 100% {
+        border-color: var(--emergency-crimson);
+        box-shadow: 0 0 35px rgba(255, 23, 68, 0.35), inset 0 0 20px rgba(255, 23, 68, 0.15);
+    }
 }
 
 .sim-controls {
@@ -2546,12 +2861,43 @@ button, a, input[type="range"] {
     border-color: var(--emergency-crimson) !important;
     background: linear-gradient(180deg, rgba(55, 7, 14, 0.95) 0%, rgba(22, 3, 6, 0.98) 100%) !important;
     box-shadow: 0 0 25px rgba(255, 23, 68, 0.5) !important;
-    animation: simCardEmergencyPulse 1.2s infinite alternate ease-in-out;
+    animation: simCardEmergencyPulse var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 @keyframes simCardEmergencyPulse {
-    0% { box-shadow: 0 0 15px rgba(255, 23, 68, 0.35); }
-    100% { box-shadow: 0 0 30px rgba(255, 23, 68, 0.75); }
+    0%, 13% {
+        box-shadow: 0 0 15px rgba(255, 23, 68, 0.35);
+        border-color: rgba(239, 68, 68, 0.6);
+    }
+    17% {
+        box-shadow: 0 0 36px rgba(255, 23, 68, 0.85);
+        border-color: #ff1744;
+    }
+    19% {
+        box-shadow: 0 0 20px rgba(255, 23, 68, 0.45);
+        border-color: rgba(239, 68, 68, 0.7);
+    }
+    21% {
+        box-shadow: 0 0 42px rgba(255, 23, 68, 0.92);
+        border-color: #ff1744;
+    }
+    23% {
+        box-shadow: 0 0 22px rgba(255, 23, 68, 0.50);
+        border-color: rgba(239, 68, 68, 0.75);
+    }
+    25% {
+        box-shadow: 0 0 52px rgba(255, 23, 68, 1);
+        border-color: #ff2d55;
+    }
+    32% {
+        box-shadow: 0 0 26px rgba(255, 23, 68, 0.60);
+        border-color: #ef4444;
+    }
+    42%, 100% {
+        box-shadow: 0 0 15px rgba(255, 23, 68, 0.35);
+        border-color: rgba(239, 68, 68, 0.6);
+    }
 }
 
 .sim-gauge-title {
@@ -2625,6 +2971,8 @@ button, a, input[type="range"] {
     background: rgba(255, 23, 68, 0.2);
     border-color: var(--emergency-crimson);
     font-weight: 700;
+    animation: alertStrobe var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 .sim-badge {
@@ -2646,7 +2994,8 @@ button, a, input[type="range"] {
     background: rgba(255, 23, 68, 0.2);
     border-color: var(--emergency-crimson);
     color: var(--emergency-crimson);
-    animation: alertStrobe 0.5s infinite alternate;
+    animation: alertStrobe var(--alert-cycle, 2.005s) ease-out infinite;
+    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 /* ---------- Dedicated Login Banner Card ---------- */
