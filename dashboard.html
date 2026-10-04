@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=2.4">
 </head>
 <body class="dashboard-page theme-silver" id="dashboardBody">
     <!-- Interactive Silver PCB Trace Canvas (Highlights Under Cursor) -->
@@ -432,13 +432,13 @@
                         <span class="legend-chip gas-chip"><i class="fas fa-circle"></i> Gas (PPM)</span>
                     </div>
                 </div>
-                <div class="chart-canvas-box">
+                <div class="chart-canvas-box" style="position: relative; width: 100%; height: 340px; overflow: hidden; border-radius: 10px;">
                     <canvas id="liveStreamingChart"></canvas>
-                    <div id="liveChartOfflineOverlay" class="chart-offline-overlay">
-                        <i class="fas fa-plug-circle-xmark"></i>
-                        <h4>Device Offline • Stream Inactive</h4>
-                        <p>Live waveform will stream automatically once ESP32 is powered on and connected.</p>
-                        <span class="offline-tip"><i class="fas fa-circle-info"></i> View past records in the <b>History &amp; Logs</b> tab</span>
+                    <div id="liveChartOfflineOverlay" class="chart-offline-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(13, 15, 22, 0.90); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border-radius: 10px; text-align: center; padding: 20px; z-index: 10; pointer-events: none; box-sizing: border-box;">
+                        <i class="fas fa-plug-circle-xmark" style="font-size: 34px; color: #64748b; margin-bottom: 12px;"></i>
+                        <h4 style="font-size: 15px; font-weight: 600; color: #cbd5e1; margin: 0 0 6px 0; letter-spacing: 0.3px;">Device Offline • Stream Inactive</h4>
+                        <p style="font-size: 13px; color: #94a3b8; max-width: 420px; margin: 0 0 12px 0; line-height: 1.5;">Live waveform will stream automatically once ESP32 is powered on and connected.</p>
+                        <span class="offline-tip" style="font-size: 11px; color: #64748b; background: rgba(255, 255, 255, 0.05); padding: 5px 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08);"><i class="fas fa-circle-info"></i> View past records in the <b style="color: #06b6d4;">History &amp; Logs</b> tab</span>
                     </div>
                 </div>
             </div>
@@ -616,7 +616,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
     <script src="js/firebase-config.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/pcb-canvas.js"></script>
-    <script src="js/dashboard.js"></script>
+    <script src="js/pcb-canvas.js?v=2.4"></script>
+    <script src="js/dashboard.js?v=2.4"></script>
 </body>
 </html>

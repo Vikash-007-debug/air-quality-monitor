@@ -381,10 +381,7 @@ function resetGaugesToZero() {
         liveChartInstance.update();
     }
 
-    const offlineOverlay = document.getElementById('liveChartOfflineOverlay');
-    if (offlineOverlay) {
-        offlineOverlay.style.display = 'flex';
-    }
+    setLiveChartOverlayVisible(true);
 
     if (telemetryBuffer.timestamps.length === 0) {
         ['Gas', 'Temp', 'Humid'].forEach(s => {
@@ -397,6 +394,30 @@ function resetGaugesToZero() {
         });
         const label = document.getElementById('historyRangeLabel');
         if (label) label.textContent = 'Device Offline — No Telemetry Logged';
+    }
+}
+
+/**
+ * Safely toggle live chart offline overlay with guaranteed absolute positioning and vertical column layout
+ */
+function setLiveChartOverlayVisible(visible) {
+    const overlay = document.getElementById('liveChartOfflineOverlay');
+    if (!overlay) return;
+    if (visible) {
+        overlay.style.display = 'flex';
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.right = '0';
+        overlay.style.bottom = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.flexDirection = 'column';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.boxSizing = 'border-box';
+    } else {
+        overlay.style.display = 'none';
     }
 }
 
@@ -413,7 +434,6 @@ function setConnectionStatus(isOnline, customMsg) {
     const instDesc = document.getElementById('instructionStatusDesc');
 
     const streamPill = document.getElementById('streamStatusPill') || document.querySelector('.stream-status-pill');
-    const offlineOverlay = document.getElementById('liveChartOfflineOverlay');
 
     if (dot && text) {
         if (isOnline) {
@@ -434,9 +454,7 @@ function setConnectionStatus(isOnline, customMsg) {
                 streamPill.className = 'stream-status-pill';
                 streamPill.innerHTML = '<span class="pulse-ring"></span> <span>Live 3s Sampling</span>';
             }
-            if (offlineOverlay) {
-                offlineOverlay.style.display = 'none';
-            }
+            setLiveChartOverlayVisible(false);
         } else {
             dot.className = 'status-dot offline';
             text.textContent = 'Offline';
@@ -455,9 +473,7 @@ function setConnectionStatus(isOnline, customMsg) {
                 streamPill.className = 'stream-status-pill stream-offline';
                 streamPill.innerHTML = '<span class="offline-ring"></span> <span>Stream Paused (Device Offline)</span>';
             }
-            if (offlineOverlay) {
-                offlineOverlay.style.display = 'flex';
-            }
+            setLiveChartOverlayVisible(true);
         }
     }
 }
@@ -1669,10 +1685,7 @@ function switchDashboardTab(tabName) {
         if (tabLiveStatsBtn) tabLiveStatsBtn.classList.add('active');
         if (viewLiveStats) {
             viewLiveStats.style.display = 'block';
-            const offlineOverlay = document.getElementById('liveChartOfflineOverlay');
-            if (offlineOverlay) {
-                offlineOverlay.style.display = (isDeviceOnline || isSimulationActive) ? 'none' : 'flex';
-            }
+            setLiveChartOverlayVisible(!isDeviceOnline && !isSimulationActive);
             setTimeout(() => {
                 if (liveChartInstance) {
                     if (!isDeviceOnline && !isSimulationActive) {
