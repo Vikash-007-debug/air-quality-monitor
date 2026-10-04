@@ -32,9 +32,17 @@ function signInWithGoogle() {
 }
 
 /**
- * Sign out the current user
+ * Sign out the current user (flushes all telemetry and alerts to cloud first)
  */
-function signOutUser() {
+async function signOutUser() {
+    try {
+        if (typeof window.flushAllTelemetryToCloud === 'function') {
+            await window.flushAllTelemetryToCloud();
+        }
+    } catch (e) {
+        console.warn("Sign out flush note:", e);
+    }
+
     auth.signOut()
         .then(() => {
             console.log("Signed out successfully");

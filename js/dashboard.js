@@ -55,7 +55,7 @@ if (window.emailjs) {
 // TELEMETRY HISTORY & STATISTICAL BUFFER
 // ==========================================================================
 const MAX_LIVE_POINTS = 30;
-const MAX_HISTORY_POINTS = 500;
+const MAX_HISTORY_POINTS = 2880; // Retains up to 24 hours of telemetry archive
 
 const telemetryBuffer = {
     timestamps: [],
@@ -445,17 +445,69 @@ function setConnectionStatus(isOnline, customMsg) {
     }
 }
 
-function updateTimestamp() {
+let lastTransmissionTimestamp = null;
+
+/**
+ * Format and display last transmission time clearly (Today, Yesterday, or exact date/time)
+ */
+function displayLastTransmission(ts) {
     const el = document.getElementById('lastUpdated');
-    if (el) {
-        const now = new Date();
-        el.textContent = now.toLocaleTimeString('en-IN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true
-        });
+    if (!el || !ts) return;
+
+    let timeNum = Number(ts);
+    let date = null;
+    if (!isNaN(timeNum) && timeNum > 1000000000) {
+        date = new Date(timeNum);
+    } else if (typeof ts === 'string') {
+        date = new Date(ts);
     }
+
+    if (!date || isNaN(date.getTime())) {
+        el.textContent = String(ts);
+        return;
+    }
+
+    lastTransmissionTimestamp = date.getTime();
+
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+
+    const timeStr = date.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    });
+
+    if (isToday) {
+        el.textContent = `Today, ${timeStr}`;
+    } else if (isYesterday) {
+        el.textContent = `Yesterday, ${timeStr}`;
+    } else {
+        const dateStr = date.toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        el.textContent = `${dateStr}, ${timeStr}`;
+    }
+}
+
+function updateTimestamp() {
+    const now = Date.now();
+    displayLastTransmission(now);
+    try {
+        localStorage.setItem('aero_last_transmission', String(now));
+        const user = auth.currentUser;
+        if (user && user.uid) {
+            localStorage.setItem(`aero_last_transmission_${user.uid}`, String(now));
+            database.ref(`users/${user.uid}/last_transmission`).set(now).catch(() => {});
+        }
+    } catch (e) {}
 }
 
 // ==========================================================================
@@ -1136,17 +1188,6 @@ function setHistoryRange(range) {
         }
     });
 
-    const label = document.getElementById('historyRangeLabel');
-    if (label) {
-        if (telemetryBuffer.timestamps.length === 0) {
-            label.textContent = isDeviceOnline ? 'Waiting for incoming telemetry stream...' : 'Device Offline — No Telemetry Logged';
-        } else {
-            if (range === '1h') label.textContent = `Showing Last 1 Hour Window (${telemetryBuffer.timestamps.length} pts)`;
-            else if (range === '6h') label.textContent = `Showing Last 6 Hours Window (${telemetryBuffer.timestamps.length} pts)`;
-            else label.textContent = `Showing Full 24 Hours Archive (${telemetryBuffer.timestamps.length} pts)`;
-        }
-    }
-
     if (historicalChartInstance) {
         historicalChartInstance.resize();
     }
@@ -1156,9 +1197,12 @@ function setHistoryRange(range) {
 function updateHistoricalChartDisplay() {
     if (!historicalChartInstance) return;
 
-    let pointsToShow = 60; // Default: ~60 points (~3 mins to 1 hour depending on frequency)
-    if (currentHistoryFilter === '6h') pointsToShow = 200;
+    const totalPts = telemetryBuffer.timestamps.length;
+    let pointsToShow = 60; // 1 hour default
+    if (currentHistoryFilter === '6h') pointsToShow = 360;
     if (currentHistoryFilter === '24h') pointsToShow = MAX_HISTORY_POINTS;
+
+    const displayedPts = Math.min(pointsToShow, totalPts);
 
     historicalChartInstance.data.labels = telemetryBuffer.timestamps.slice(-pointsToShow);
     historicalChartInstance.data.datasets[0].data = telemetryBuffer.temp.slice(-pointsToShow);
@@ -1167,12 +1211,25 @@ function updateHistoricalChartDisplay() {
     historicalChartInstance.update();
 
     const label = document.getElementById('historyRangeLabel');
-    if (label && telemetryBuffer.timestamps.length === 0) {
-        label.textContent = isDeviceOnline ? 'Waiting for incoming telemetry stream...' : 'Device Offline — No Telemetry Logged';
+    if (label) {
+        if (totalPts === 0) {
+            label.textContent = isDeviceOnline ? 'Waiting for incoming telemetry stream...' : 'Device Offline — No Telemetry Logged';
+        } else {
+            if (currentHistoryFilter === '1h') {
+                label.textContent = `Showing Last 1 Hour Window (${displayedPts} pts)`;
+            } else if (currentHistoryFilter === '6h') {
+                label.textContent = `Showing Last 6 Hours Window (${displayedPts} pts)`;
+            } else {
+                label.textContent = `Showing Full 24 Hours Archive (${displayedPts} pts)`;
+            }
+        }
     }
 }
 
 function clearHistoryLog() {
+    if (!confirm("Are you sure you want to clear your local history and incident logs? This will reset the current session history.")) {
+        return;
+    }
     telemetryBuffer.timestamps = [];
     telemetryBuffer.gas = [];
     telemetryBuffer.temp = [];
@@ -1310,6 +1367,16 @@ function renderIncidentTable() {
 let firebaseTelemetrySyncTimer = null;
 
 /**
+ * Utility to convert Firebase array or object-with-indices to a clean Array
+ */
+function sanitizeArray(arrOrObj) {
+    if (!arrOrObj) return [];
+    if (Array.isArray(arrOrObj)) return arrOrObj;
+    if (typeof arrOrObj === 'object') return Object.values(arrOrObj);
+    return [];
+}
+
+/**
  * Save telemetry buffer to localStorage immediately and debounce sync to Firebase Realtime Database
  */
 function persistTelemetryBuffer() {
@@ -1322,7 +1389,7 @@ function persistTelemetryBuffer() {
         console.warn("Storage quota note:", e);
     }
 
-    // Debounce cloud write to Firebase Realtime Database (sync every 5 seconds)
+    // Debounce cloud write to Firebase Realtime Database (sync every 3 seconds)
     if (!firebaseTelemetrySyncTimer) {
         firebaseTelemetrySyncTimer = setTimeout(() => {
             firebaseTelemetrySyncTimer = null;
@@ -1331,8 +1398,9 @@ function persistTelemetryBuffer() {
                 database.ref(`users/${user.uid}/telemetry_history`).set(telemetryBuffer).catch(err => {
                     console.warn("Firebase telemetry sync note:", err);
                 });
+                database.ref('telemetry_history').set(telemetryBuffer).catch(() => {});
             }
-        }, 5000);
+        }, 3000);
     }
 }
 
@@ -1359,7 +1427,44 @@ function persistIncidentLedger() {
 }
 
 /**
- * Load and restore persisted telemetry history and incident ledger for authenticated user
+ * Immediate synchronous flush of all user data to cloud before signing out or unloading
+ */
+window.flushAllTelemetryToCloud = async function() {
+    if (firebaseTelemetrySyncTimer) {
+        clearTimeout(firebaseTelemetrySyncTimer);
+        firebaseTelemetrySyncTimer = null;
+    }
+    const user = auth.currentUser;
+    if (!user || !user.uid) return;
+
+    try {
+        if (telemetryBuffer.timestamps.length > 0) {
+            localStorage.setItem(`aero_telemetry_${user.uid}`, JSON.stringify(telemetryBuffer));
+        }
+        localStorage.setItem(`aero_incidents_${user.uid}`, JSON.stringify(incidentLedger));
+        localStorage.setItem(`aero_incident_count_${user.uid}`, String(emergencyIncidentCount));
+        if (lastTransmissionTimestamp) {
+            localStorage.setItem(`aero_last_transmission_${user.uid}`, String(lastTransmissionTimestamp));
+        }
+    } catch (e) {}
+
+    const writes = [];
+    if (telemetryBuffer.timestamps.length > 0) {
+        writes.push(database.ref(`users/${user.uid}/telemetry_history`).set(telemetryBuffer).catch(() => {}));
+        writes.push(database.ref('telemetry_history').set(telemetryBuffer).catch(() => {}));
+    }
+    if (incidentLedger.length > 0) {
+        writes.push(database.ref(`users/${user.uid}/incident_ledger`).set(incidentLedger).catch(() => {}));
+    }
+    writes.push(database.ref(`users/${user.uid}/incident_count`).set(emergencyIncidentCount).catch(() => {}));
+    if (lastTransmissionTimestamp) {
+        writes.push(database.ref(`users/${user.uid}/last_transmission`).set(lastTransmissionTimestamp).catch(() => {}));
+    }
+    await Promise.all(writes);
+};
+
+/**
+ * Load and restore persisted telemetry history, incident ledger, and last transmission
  */
 function loadUserPersistedHistory(user) {
     if (!user || !user.uid) return;
@@ -1370,19 +1475,23 @@ function loadUserPersistedHistory(user) {
         const cachedTelemetry = localStorage.getItem(`aero_telemetry_${uid}`);
         if (cachedTelemetry) {
             const parsed = JSON.parse(cachedTelemetry);
-            if (parsed && Array.isArray(parsed.timestamps) && parsed.timestamps.length > 0) {
-                telemetryBuffer.timestamps = parsed.timestamps;
-                telemetryBuffer.gas = parsed.gas || [];
-                telemetryBuffer.temp = parsed.temp || [];
-                telemetryBuffer.humid = parsed.humid || [];
+            if (parsed) {
+                const ts = sanitizeArray(parsed.timestamps);
+                if (ts.length > 0) {
+                    telemetryBuffer.timestamps = ts;
+                    telemetryBuffer.gas = sanitizeArray(parsed.gas);
+                    telemetryBuffer.temp = sanitizeArray(parsed.temp);
+                    telemetryBuffer.humid = sanitizeArray(parsed.humid);
+                }
             }
         }
 
         const cachedIncidents = localStorage.getItem(`aero_incidents_${uid}`);
         if (cachedIncidents) {
             const parsedIncidents = JSON.parse(cachedIncidents);
-            if (Array.isArray(parsedIncidents) && parsedIncidents.length > 0) {
-                incidentLedger = parsedIncidents;
+            const inc = sanitizeArray(parsedIncidents);
+            if (inc.length > 0) {
+                incidentLedger = inc;
             }
         }
 
@@ -1391,6 +1500,11 @@ function loadUserPersistedHistory(user) {
             emergencyIncidentCount = parseInt(cachedCount, 10) || 0;
         } else {
             emergencyIncidentCount = incidentLedger.length;
+        }
+
+        const cachedLastTx = localStorage.getItem(`aero_last_transmission_${uid}`) || localStorage.getItem('aero_last_transmission');
+        if (cachedLastTx) {
+            displayLastTransmission(cachedLastTx);
         }
     } catch (e) {
         console.warn("Local storage cache restore note:", e);
@@ -1417,29 +1531,51 @@ function loadUserPersistedHistory(user) {
     }
 
     // 2. Cross-device Cloud synchronization via Firebase Realtime Database
-    database.ref(`users/${uid}`).once('value').then(snapshot => {
-        const val = snapshot.val();
-        if (!val) return;
+    database.ref(`users/${uid}`).once('value').then(async (snapshot) => {
+        const val = snapshot.val() || {};
         let shouldUpdate = false;
 
-        // Sync telemetry history from cloud if cloud has records and local was empty or smaller
-        if (val.telemetry_history && Array.isArray(val.telemetry_history.timestamps)) {
-            if (telemetryBuffer.timestamps.length === 0 || val.telemetry_history.timestamps.length >= telemetryBuffer.timestamps.length) {
-                telemetryBuffer.timestamps = val.telemetry_history.timestamps;
-                telemetryBuffer.gas = val.telemetry_history.gas || [];
-                telemetryBuffer.temp = val.telemetry_history.temp || [];
-                telemetryBuffer.humid = val.telemetry_history.humid || [];
+        // Restore last transmission timestamp from user cloud profile
+        if (val.last_transmission) {
+            displayLastTransmission(val.last_transmission);
+            try {
+                localStorage.setItem(`aero_last_transmission_${uid}`, String(val.last_transmission));
+            } catch (e) {}
+        }
+
+        // Sync telemetry history from user cloud record, or fall back to master telemetry history
+        let cloudHistory = val.telemetry_history;
+        if (!cloudHistory || !cloudHistory.timestamps || sanitizeArray(cloudHistory.timestamps).length === 0) {
+            try {
+                const rootSnap = await database.ref('telemetry_history').once('value');
+                if (rootSnap && rootSnap.val()) {
+                    cloudHistory = rootSnap.val();
+                }
+            } catch (e) {
+                console.warn("Root telemetry history fallback note:", e);
+            }
+        }
+
+        if (cloudHistory && cloudHistory.timestamps) {
+            const cloudTs = sanitizeArray(cloudHistory.timestamps);
+            if (cloudTs.length > 0 && (telemetryBuffer.timestamps.length === 0 || cloudTs.length >= telemetryBuffer.timestamps.length)) {
+                telemetryBuffer.timestamps = cloudTs;
+                telemetryBuffer.gas = sanitizeArray(cloudHistory.gas);
+                telemetryBuffer.temp = sanitizeArray(cloudHistory.temp);
+                telemetryBuffer.humid = sanitizeArray(cloudHistory.humid);
                 shouldUpdate = true;
                 try {
                     localStorage.setItem(`aero_telemetry_${uid}`, JSON.stringify(telemetryBuffer));
+                    database.ref(`users/${uid}/telemetry_history`).set(telemetryBuffer).catch(() => {});
                 } catch (e) {}
             }
         }
 
         // Sync incident audit ledger from cloud
-        if (val.incident_ledger && Array.isArray(val.incident_ledger)) {
-            if (incidentLedger.length === 0 || val.incident_ledger.length >= incidentLedger.length) {
-                incidentLedger = val.incident_ledger;
+        if (val.incident_ledger) {
+            const cloudIncidents = sanitizeArray(val.incident_ledger);
+            if (incidentLedger.length === 0 || cloudIncidents.length >= incidentLedger.length) {
+                incidentLedger = cloudIncidents;
                 shouldUpdate = true;
                 try {
                     localStorage.setItem(`aero_incidents_${uid}`, JSON.stringify(incidentLedger));
@@ -1604,11 +1740,24 @@ sensorRef.on('value', (snapshot) => {
         return;
     }
 
+    // Always display and persist last transmission timestamp whenever available
+    if (data.last_seen) {
+        displayLastTransmission(data.last_seen);
+        try {
+            localStorage.setItem('aero_last_transmission', String(data.last_seen));
+            const user = auth.currentUser;
+            if (user && user.uid) {
+                localStorage.setItem(`aero_last_transmission_${user.uid}`, String(data.last_seen));
+                database.ref(`users/${user.uid}/last_transmission`).set(data.last_seen).catch(() => {});
+            }
+        } catch (e) {}
+    }
+
     // CASE A: Payload contains server timestamp (e.g. data.last_seen)
     if (data.last_seen) {
         const timeSinceLastPacket = Date.now() - Number(data.last_seen);
         if (timeSinceLastPacket > HEARTBEAT_TIMEOUT_MS) {
-            // Last packet was received more than 8 seconds ago -> Device is OFF!
+            // Last packet was received more than 12 seconds ago -> Device is OFF!
             console.log(`[WATCHDOG] ESP32 is offline. Last seen ${Math.round(timeSinceLastPacket / 1000)}s ago.`);
             isDeviceOnline = false;
             setConnectionStatus(false, 'ESP32 device is offline / powered off. Gauges zeroed.');
@@ -1623,10 +1772,13 @@ sensorRef.on('value', (snapshot) => {
             processTelemetryPayload(data);
 
             heartbeatWatchdogTimer = setTimeout(() => {
-                console.warn("[WATCHDOG] ESP32 telemetry stopped for 8s. Marking device offline.");
+                console.warn("[WATCHDOG] ESP32 telemetry stopped. Marking device offline.");
                 isDeviceOnline = false;
                 setConnectionStatus(false, 'ESP32 device powered off or disconnected. Gauges zeroed.');
                 resetGaugesToZero();
+                if (typeof window.flushAllTelemetryToCloud === 'function') {
+                    window.flushAllTelemetryToCloud();
+                }
             }, HEARTBEAT_TIMEOUT_MS);
             return;
         }
@@ -1658,12 +1810,15 @@ sensorRef.on('value', (snapshot) => {
         setConnectionStatus(true);
         processTelemetryPayload(data);
 
-        // Re-arm 8-second watchdog: if user powers off ESP32, mark offline in 8 seconds and zero gauges
+        // Re-arm watchdog: if user powers off ESP32, mark offline in 12s, zero gauges, and flush telemetry
         heartbeatWatchdogTimer = setTimeout(() => {
-            console.warn("[WATCHDOG] ESP32 telemetry stopped for 8s. Marking device offline.");
+            console.warn("[WATCHDOG] ESP32 telemetry stopped. Marking device offline.");
             isDeviceOnline = false;
             setConnectionStatus(false, 'ESP32 device powered off or disconnected. Gauges zeroed.');
             resetGaugesToZero();
+            if (typeof window.flushAllTelemetryToCloud === 'function') {
+                window.flushAllTelemetryToCloud();
+            }
         }, HEARTBEAT_TIMEOUT_MS);
     }
 });
@@ -1703,9 +1858,14 @@ window.addEventListener('beforeunload', () => {
     const user = auth.currentUser;
     if (user && user.uid) {
         try {
-            localStorage.setItem(`aero_telemetry_${user.uid}`, JSON.stringify(telemetryBuffer));
+            if (telemetryBuffer.timestamps.length > 0) {
+                localStorage.setItem(`aero_telemetry_${user.uid}`, JSON.stringify(telemetryBuffer));
+            }
             localStorage.setItem(`aero_incidents_${user.uid}`, JSON.stringify(incidentLedger));
             localStorage.setItem(`aero_incident_count_${user.uid}`, String(emergencyIncidentCount));
+            if (lastTransmissionTimestamp) {
+                localStorage.setItem(`aero_last_transmission_${user.uid}`, String(lastTransmissionTimestamp));
+            }
         } catch (e) {}
     }
 });
