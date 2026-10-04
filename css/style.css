@@ -444,20 +444,6 @@ body.emergency-mode .emergency-bar {
     transition: all 0.25s ease;
 }
 
-.add-device-btn {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid var(--border-silver);
-    color: var(--text-silver);
-}
-
-.add-device-btn:hover {
-    background: rgba(255, 255, 255, 0.14);
-    border-color: #ffffff;
-    color: #ffffff;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15);
-}
-
 .sim-btn {
     background: rgba(245, 158, 11, 0.12);
     border: 1px solid rgba(245, 158, 11, 0.35);
