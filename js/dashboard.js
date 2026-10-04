@@ -183,35 +183,110 @@ function updateStatus(id, percent) {
 }
 
 // ==========================================================================
-// BATTERY & SYSTEM DIAGNOSTICS
+// BATTERY & DUAL POWER SOURCE DIAGNOSTICS (BATTERY & USB)
 // ==========================================================================
+let currentPowerSource = localStorage.getItem('aero_power_source') || 'battery';
+
 /**
- * Update Battery & Power System Diagnostics display
- * Supports:
- * - Direct percentage (0 - 100)
- * - Direct voltage (2.5V - 4.5V or 5.0V Boosted Rail)
- * - Smart 5V Power Rail detection (Battery via MT3608 or USB)
+ * Toggle or set power source (User Click or Automatic Telemetry)
+ * @param {'battery'|'usb'} source
  */
-function updateBattery(rawBatt, rawVolt) {
+function togglePowerSource(source) {
+    if (source !== 'battery' && source !== 'usb') return;
+    currentPowerSource = source;
+    try {
+        localStorage.setItem('aero_power_source', source);
+        if (typeof database !== 'undefined' && database) {
+            database.ref('alert_settings/power_source').set(source).catch(() => {});
+        }
+    } catch (err) {
+        console.warn("[POWER] Failed to store power source preference:", err);
+    }
+
+    // Immediately re-render with active glow
+    if (isDeviceOnline || isSimulationActive) {
+        if (lastLivePayload) {
+            updateBattery(lastLivePayload.battery, lastLivePayload.voltage);
+        } else {
+            updateBattery(100, 5.00);
+        }
+    } else {
+        renderPowerTilesOffline();
+    }
+}
+window.togglePowerSource = togglePowerSource;
+
+/**
+ * Render both power tiles in dimmed offline state
+ */
+function renderPowerTilesOffline() {
+    const tileBattery = document.getElementById('tileBattery');
+    const tileUsb = document.getElementById('tileUsb');
+    const iconBox = document.getElementById('batteryIconBox');
+    const iconEl = document.getElementById('batteryIcon');
     const bar = document.getElementById('batteryBar');
     const valueEl = document.getElementById('batteryValue');
     const voltageEl = document.getElementById('batteryVoltage');
-    const iconEl = document.getElementById('batteryIcon');
     const labelEl = document.getElementById('batteryLabel');
     const noteEl = document.getElementById('batteryStatusNote');
+
+    if (tileBattery) {
+        tileBattery.className = 'power-tile dimmed';
+    }
+    if (tileUsb) {
+        tileUsb.className = 'power-tile dimmed';
+    }
+    if (iconBox) {
+        iconBox.className = 'info-icon battery-icon glow-offline';
+    }
+    if (iconEl) {
+        iconEl.className = 'fas fa-battery-empty';
+        iconEl.style.color = '#64748b';
+    }
+    if (bar) {
+        bar.style.width = '0%';
+        bar.style.background = '#475569';
+    }
+    if (valueEl) valueEl.textContent = '0%';
+    if (voltageEl) voltageEl.textContent = '0.00V';
+    if (labelEl) labelEl.textContent = 'Power Source & Status';
+    if (noteEl) noteEl.style.display = 'none';
+}
+
+/**
+ * Update Battery & Power System Diagnostics display
+ * - If powered by battery: Battery symbol and tile glows emerald green!
+ * - If powered by USB: USB symbol and tile glows electric cyan!
+ * - If offline: Both tiles dimmed in standby state.
+ */
+function updateBattery(rawBatt, rawVolt) {
+    const tileBattery = document.getElementById('tileBattery');
+    const tileUsb = document.getElementById('tileUsb');
+    const iconBox = document.getElementById('batteryIconBox');
+    const iconEl = document.getElementById('batteryIcon');
+    const bar = document.getElementById('batteryBar');
+    const valueEl = document.getElementById('batteryValue');
+    const voltageEl = document.getElementById('batteryVoltage');
+    const labelEl = document.getElementById('batteryLabel');
+    const noteEl = document.getElementById('batteryStatusNote');
+
+    // 1. If device is offline and not simulating, render clean offline unlit state
+    if (!isDeviceOnline && !isSimulationActive) {
+        renderPowerTilesOffline();
+        return;
+    }
 
     let percent = 0;
     let voltage = 0;
     let is5VRail = false;
 
-    // 1. Sanitize incoming values
+    // 2. Sanitize incoming values
     let num = Number(rawBatt);
     if (isNaN(num)) num = 0;
 
     let volt = Number(rawVolt);
     if (isNaN(volt)) volt = 0;
 
-    // 2. Check if voltage was passed
     if (volt > 0) {
         voltage = volt;
         if (voltage >= 4.5) {
@@ -238,70 +313,108 @@ function updateBattery(rawBatt, rawVolt) {
         }
     }
 
-    // 3. Fallback: If device is online but reading is 0, device is powered via 5V rail
-    if ((isDeviceOnline || isSimulationActive) && percent === 0 && voltage <= 0) {
+    // Fallback: If device is active but readings are 0, device is powered via 5V rail
+    if (percent === 0 && voltage <= 0) {
         is5VRail = true;
         percent = 100;
         voltage = 5.00;
     }
 
-    // 4. Update Header Label
-    if (labelEl) {
-        labelEl.textContent = is5VRail ? 'Battery / Power System' : 'Battery Level (18650 Li-ion)';
+    // If reading is physically a Li-ion cell range (3.0V - 4.4V), force battery source
+    if (voltage > 0 && voltage < 4.5) {
+        currentPowerSource = 'battery';
     }
 
-    // 5. Update Voltage Display
-    if (voltageEl) {
-        voltageEl.textContent = is5VRail ? '5.00V (5V Rail)' : `${voltage.toFixed(2)}V`;
-    }
+    const isBattery = (currentPowerSource === 'battery');
 
-    // 6. Update Percentage Display & Progress Bar
-    if (valueEl) {
-        if (is5VRail) {
-            valueEl.innerHTML = `100% <small style="font-size:11px; color:var(--accent-emerald,#10b981); font-weight:600;">(Active)</small>`;
-        } else {
-            valueEl.textContent = `${Math.round(percent)}%`;
+    // 3. Render Glowing vs Dimmed State
+    if (isBattery) {
+        // --- BATTERY MODE (Emerald Green Glow) ---
+        if (tileBattery) {
+            tileBattery.className = 'power-tile active-battery';
         }
-    }
-
-    if (bar) {
-        bar.style.width = percent + '%';
-        if (is5VRail || percent > 60) {
-            bar.style.background = 'linear-gradient(90deg, #10b981, #06b6d4)';
-        } else if (percent > 25) {
-            bar.style.background = 'linear-gradient(90deg, #f59e0b, #f97316)';
-        } else {
-            bar.style.background = 'linear-gradient(90deg, #ef4444, #f97316)';
+        if (tileUsb) {
+            tileUsb.className = 'power-tile dimmed';
         }
-    }
-
-    // 7. Update Battery Icon (Always a battery icon, never a misleading USB plug!)
-    if (iconEl) {
-        iconEl.style.color = '';
-        if (is5VRail || percent > 80) {
-            iconEl.className = 'fas fa-battery-full';
+        if (iconBox) {
+            iconBox.className = 'info-icon battery-icon glow-battery';
+        }
+        if (iconEl) {
+            if (is5VRail || percent > 80) {
+                iconEl.className = 'fas fa-battery-full';
+            } else if (percent > 55) {
+                iconEl.className = 'fas fa-battery-three-quarters';
+            } else if (percent > 30) {
+                iconEl.className = 'fas fa-battery-half';
+            } else if (percent > 10) {
+                iconEl.className = 'fas fa-battery-quarter';
+            } else {
+                iconEl.className = 'fas fa-battery-empty';
+            }
             iconEl.style.color = 'var(--accent-emerald, #10b981)';
-        } else if (percent > 55) {
-            iconEl.className = 'fas fa-battery-three-quarters';
-        } else if (percent > 30) {
-            iconEl.className = 'fas fa-battery-half';
-        } else if (percent > 10) {
-            iconEl.className = 'fas fa-battery-quarter';
-        } else {
-            iconEl.className = 'fas fa-battery-empty';
         }
-    }
-
-    // 8. Update Helpful Status Note
-    if (noteEl) {
-        if (!isDeviceOnline && !isSimulationActive) {
-            noteEl.style.display = 'none';
-        } else if (is5VRail) {
+        if (labelEl) {
+            labelEl.textContent = is5VRail ? 'Power Source: Battery (5V Rail)' : 'Power Source: Battery (18650 Li-ion)';
+        }
+        if (voltageEl) {
+            voltageEl.textContent = is5VRail ? '5.00V (5V Rail)' : `${voltage.toFixed(2)}V`;
+        }
+        if (valueEl) {
+            if (is5VRail) {
+                valueEl.innerHTML = `100% <small style="font-size:11px; color:var(--accent-emerald,#10b981); font-weight:600;">(Active)</small>`;
+            } else {
+                valueEl.textContent = `${Math.round(percent)}%`;
+            }
+        }
+        if (bar) {
+            bar.style.width = percent + '%';
+            if (is5VRail || percent > 60) {
+                bar.style.background = 'linear-gradient(90deg, #10b981, #06b6d4)';
+            } else if (percent > 25) {
+                bar.style.background = 'linear-gradient(90deg, #f59e0b, #f97316)';
+            } else {
+                bar.style.background = 'linear-gradient(90deg, #ef4444, #f97316)';
+            }
+        }
+        if (noteEl) {
             noteEl.style.display = 'block';
-            noteEl.innerHTML = '<i class="fas fa-circle-info"></i> Running on 5V power rail. Connect 18650(+) divider to GPIO 35 for live cell drainage %';
-        } else {
+            if (is5VRail) {
+                noteEl.innerHTML = '<i class="fas fa-circle-info"></i> Running on 18650 Battery System (5V Boosted Rail). Connect 18650(+) divider to GPIO 35 for live cell drainage %';
+            } else {
+                noteEl.innerHTML = `<i class="fas fa-check-circle" style="color:var(--accent-emerald,#10b981);"></i> Live 18650 cell monitoring active (${voltage.toFixed(2)}V)`;
+            }
+        }
+    } else {
+        // --- USB MODE (Electric Cyan Glow) ---
+        if (tileUsb) {
+            tileUsb.className = 'power-tile active-usb';
+        }
+        if (tileBattery) {
+            tileBattery.className = 'power-tile dimmed';
+        }
+        if (iconBox) {
+            iconBox.className = 'info-icon battery-icon glow-usb';
+        }
+        if (iconEl) {
+            iconEl.className = 'fab fa-usb';
+            iconEl.style.color = 'var(--accent-cyan, #06b6d4)';
+        }
+        if (labelEl) {
+            labelEl.textContent = 'Power Source: USB / Mains';
+        }
+        if (voltageEl) {
+            voltageEl.textContent = '5.00V (USB VBUS)';
+        }
+        if (valueEl) {
+            valueEl.innerHTML = `100% <small style="font-size:11px; color:var(--accent-cyan,#06b6d4); font-weight:600;">(Continuous)</small>`;
+        }
+        if (bar) {
+            bar.style.width = '100%';
+            bar.style.background = 'linear-gradient(90deg, #06b6d4, #3b82f6)';
+        }
+        if (noteEl) {
             noteEl.style.display = 'block';
-            noteEl.innerHTML = `<i class="fas fa-check-circle" style="color:var(--accent-emerald,#10b981);"></i> Live 18650 cell monitoring active (${voltage.toFixed(2)}V)`;
+            noteEl.innerHTML = '<i class="fas fa-bolt" style="color:var(--accent-cyan,#06b6d4);"></i> Running on USB / Mains continuous power supply';
         }
     }
 }
@@ -438,25 +551,8 @@ function resetGaugesToZero() {
         resetEmergencyState();
     }
 
-    // 7. Reset Battery Diagnostics to 0 (Offline)
-    const batteryVal = document.getElementById('batteryValue');
-    const batteryVolt = document.getElementById('batteryVoltage');
-    const batteryBar = document.getElementById('batteryBar');
-    const batteryIcon = document.getElementById('batteryIcon');
-    const batteryLabel = document.getElementById('batteryLabel');
-    if (batteryLabel) batteryLabel.textContent = 'Battery Level (18650 Li-ion)';
-    if (batteryVal) batteryVal.textContent = '0%';
-    if (batteryVolt) batteryVolt.textContent = '0.00V';
-    if (batteryBar) {
-        batteryBar.style.width = '0%';
-        batteryBar.style.background = '#475569';
-    }
-    if (batteryIcon) {
-        batteryIcon.className = 'fas fa-battery-empty';
-        batteryIcon.style.color = '';
-    }
-    const batteryStatusNote = document.getElementById('batteryStatusNote');
-    if (batteryStatusNote) batteryStatusNote.style.display = 'none';
+    // 7. Reset Battery & Power Diagnostics to Offline (Both tiles dimmed)
+    renderPowerTilesOffline();
 
     // 8. Reset Live Stat Cards (Tab 2) current values to offline indicators
     const statGas = document.getElementById('statCurrentGas');
@@ -1846,6 +1942,13 @@ function processTelemetryPayload(data) {
         return;
     }
 
+    // Auto-sync power source if transmitted by ESP32 or if reading direct cell voltage
+    if (data.power_source && (data.power_source === 'battery' || data.power_source === 'usb')) {
+        currentPowerSource = data.power_source;
+    } else if (Number(data.voltage) > 0 && Number(data.voltage) < 4.5) {
+        currentPowerSource = 'battery';
+    }
+
     // 1. Update Speedometer Gauges
     updateGauge('temp', temp, TEMP_MIN, TEMP_MAX);
     updateGauge('humid', humid, HUMID_MIN, HUMID_MAX);
@@ -1977,6 +2080,24 @@ document.addEventListener('DOMContentLoaded', () => {
     initCharts();
     if (auth.currentUser) {
         loadUserPersistedHistory(auth.currentUser);
+    }
+
+    // Sync saved power source preference from Firebase cloud
+    try {
+        database.ref('alert_settings/power_source').on('value', (snap) => {
+            const val = snap.val();
+            if (val === 'battery' || val === 'usb') {
+                currentPowerSource = val;
+                try { localStorage.setItem('aero_power_source', val); } catch (e) {}
+                if (isDeviceOnline || isSimulationActive) {
+                    if (lastLivePayload) {
+                        updateBattery(lastLivePayload.battery, lastLivePayload.voltage);
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.warn("[FIREBASE] Unable to bind power_source listener:", e);
     }
 });
 

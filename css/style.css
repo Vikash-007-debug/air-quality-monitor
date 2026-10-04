@@ -1076,6 +1076,247 @@ body.emergency-mode .emergency-dispatch-icon,
     transition: width 1s ease;
 }
 
+#powerDiagnosticsCard {
+    align-items: flex-start;
+}
+
+/* ==========================================================================
+   DUAL POWER SOURCE TILES (BATTERY & USB)
+   ========================================================================== */
+.power-source-tiles {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0 10px 0;
+    width: 100%;
+}
+
+.power-tile {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 6px 7px 6px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    outline: none;
+    font-family: inherit;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.power-tile:focus-visible {
+    outline: 2px solid var(--border-silver-bright);
+}
+
+.power-tile .tile-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+    transition: all 0.3s ease;
+}
+
+.power-tile .tile-icon-wrap i {
+    font-size: 15px;
+    transition: all 0.3s ease;
+}
+
+.power-tile .tile-text {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.25px;
+    line-height: 1.25;
+    white-space: normal;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+/* Tiny Corner LED Indicator */
+.power-tile .tile-led {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #334155;
+    transition: all 0.3s ease;
+}
+
+/* --------------------------------------------------------------------------
+   BATTERY ACTIVE & GLOWING STATE (Vivid Emerald Green Aura)
+   -------------------------------------------------------------------------- */
+.power-tile.active-battery {
+    background: radial-gradient(circle at top, rgba(16, 185, 129, 0.22), rgba(16, 185, 129, 0.06) 70%),
+                rgba(19, 19, 28, 0.90);
+    border: 1px solid rgba(16, 185, 129, 0.75);
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.40),
+                inset 0 0 10px rgba(16, 185, 129, 0.18);
+    animation: batteryNeonPulse 2.8s ease-in-out infinite;
+}
+
+.power-tile.active-battery .tile-icon-wrap i {
+    color: #10b981;
+    filter: drop-shadow(0 0 7px rgba(16, 185, 129, 0.95))
+            drop-shadow(0 0 12px rgba(16, 185, 129, 0.55));
+    transform: scale(1.15);
+}
+
+.power-tile.active-battery .tile-text {
+    color: #34d399;
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.70);
+    font-weight: 700;
+}
+
+.power-tile.active-battery .tile-led {
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981, 0 0 12px #34d399;
+    animation: ledBlinkGreen 2s ease-in-out infinite;
+}
+
+@keyframes batteryNeonPulse {
+    0%, 100% {
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.35),
+                    inset 0 0 8px rgba(16, 185, 129, 0.14);
+        border-color: rgba(16, 185, 129, 0.65);
+    }
+    50% {
+        box-shadow: 0 0 22px rgba(16, 185, 129, 0.65),
+                    inset 0 0 14px rgba(16, 185, 129, 0.26);
+        border-color: rgba(16, 185, 129, 1);
+    }
+}
+
+@keyframes ledBlinkGreen {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+/* --------------------------------------------------------------------------
+   USB ACTIVE & GLOWING STATE (Electric Cyan Aura)
+   -------------------------------------------------------------------------- */
+.power-tile.active-usb {
+    background: radial-gradient(circle at top, rgba(6, 182, 212, 0.22), rgba(6, 182, 212, 0.06) 70%),
+                rgba(19, 19, 28, 0.90);
+    border: 1px solid rgba(6, 182, 212, 0.75);
+    box-shadow: 0 0 16px rgba(6, 182, 212, 0.40),
+                inset 0 0 10px rgba(6, 182, 212, 0.18);
+    animation: usbNeonPulse 2.8s ease-in-out infinite;
+}
+
+.power-tile.active-usb .tile-icon-wrap i {
+    color: #06b6d4;
+    filter: drop-shadow(0 0 7px rgba(6, 182, 212, 0.95))
+            drop-shadow(0 0 12px rgba(6, 182, 212, 0.55));
+    transform: scale(1.15);
+}
+
+.power-tile.active-usb .tile-text {
+    color: #38bdf8;
+    text-shadow: 0 0 8px rgba(6, 182, 212, 0.70);
+    font-weight: 700;
+}
+
+.power-tile.active-usb .tile-led {
+    background: #06b6d4;
+    box-shadow: 0 0 8px #06b6d4, 0 0 12px #38bdf8;
+    animation: ledBlinkCyan 2s ease-in-out infinite;
+}
+
+@keyframes usbNeonPulse {
+    0%, 100% {
+        box-shadow: 0 0 12px rgba(6, 182, 212, 0.35),
+                    inset 0 0 8px rgba(6, 182, 212, 0.14);
+        border-color: rgba(6, 182, 212, 0.65);
+    }
+    50% {
+        box-shadow: 0 0 22px rgba(6, 182, 212, 0.65),
+                    inset 0 0 14px rgba(6, 182, 212, 0.26);
+        border-color: rgba(6, 182, 212, 1);
+    }
+}
+
+@keyframes ledBlinkCyan {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+/* --------------------------------------------------------------------------
+   DIMMED & INACTIVE STATE (Subdued / Standby)
+   -------------------------------------------------------------------------- */
+.power-tile.dimmed {
+    opacity: 0.35;
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.06);
+    box-shadow: none;
+    animation: none;
+}
+
+.power-tile.dimmed .tile-icon-wrap i {
+    color: #64748b;
+    filter: none;
+    transform: scale(1);
+}
+
+.power-tile.dimmed .tile-text {
+    color: #64748b;
+    text-shadow: none;
+    font-weight: 500;
+}
+
+.power-tile.dimmed .tile-led {
+    background: #334155;
+    box-shadow: none;
+    animation: none;
+}
+
+.power-tile:hover:not(.active-battery):not(.active-usb) {
+    opacity: 0.65;
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Left Icon Dynamic Glow Effects */
+.battery-icon.glow-battery {
+    background: rgba(16, 185, 129, 0.14) !important;
+    border-color: rgba(16, 185, 129, 0.55) !important;
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.30) !important;
+    color: #10b981 !important;
+}
+
+.battery-icon.glow-usb {
+    background: rgba(6, 182, 212, 0.14) !important;
+    border-color: rgba(6, 182, 212, 0.55) !important;
+    box-shadow: 0 0 14px rgba(6, 182, 212, 0.30) !important;
+    color: #06b6d4 !important;
+}
+
+.battery-icon.glow-offline {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: var(--border-subtle) !important;
+    box-shadow: none !important;
+    color: #64748b !important;
+}
+
+@media (max-width: 480px) {
+    .power-tile {
+        padding: 7px 4px;
+    }
+    .power-tile .tile-text {
+        font-size: 9.5px;
+    }
+    .power-tile .tile-icon-wrap i {
+        font-size: 13.5px;
+    }
+}
+
 /* ==========================================================================
    TAB 2: REAL-TIME STREAMING & METRIC CARDS
    ========================================================================== */
