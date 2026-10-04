@@ -25,9 +25,6 @@ const EMERGENCY_THRESHOLDS = {
 let isEmergencyActive = false;
 let isAudioMuted = false;
 let alertAudio = null;
-let fallbackAudioContext = null;
-let fallbackSirenInterval = null;
-let fallbackMasterGain = null;
 let lastEmailSentTimestamp = 0;
 const EMAIL_COOLDOWN_MS = 60 * 1000; // 60-second cooldown between auto-emails
 let isSimulationActive = false;
@@ -592,44 +589,63 @@ function applyEmergencyState(state) {
 }
 
 // ==========================================================================
-// ==========================================================================
-// EMERGENCY AUDIO ALARM & MUTE TOGGLE (Synchronized with alert.mp3)
-// Exact measured loop period: 2.0049s (4 repeats in 8.0196s file)
-// Triple beep envelope peaks at: +0.32s, +0.40s, +0.48s
+// EMERGENCY AUDIO ALARM (Plays User's alert.mp3 in Lockstep Synchrony)
+// Repeating cycle period: 2.005s (Alarm blast at 0.32s - 0.70s, silence 0.85s - 2.005s)
 // ==========================================================================
 const ALERT_CYCLE_SECONDS = 2.0049;
 let alertAudioBound = false;
 
 function getAlertAudio() {
     if (!alertAudio) {
-        const domAudio = document.getElementById('emergencyAudio');
-        if (domAudio) {
-            alertAudio = domAudio;
-        } else {
+        alertAudio = document.getElementById('emergencyAudio');
+        if (!alertAudio) {
             alertAudio = new Audio('audio/alert.mp3');
         }
         alertAudio.loop = true;
     }
     if (!alertAudioBound && alertAudio) {
         alertAudioBound = true;
-        const handleSync = () => {
-            if (isEmergencyActive) {
-                syncEmergencyAnimationPhase(alertAudio);
+        const onSync = () => {
+            if (isEmergencyActive && !isAudioMuted) {
+                syncAnimationsToAudio(alertAudio);
             }
         };
-        alertAudio.addEventListener('playing', handleSync);
-        alertAudio.addEventListener('timeupdate', handleSync);
-        alertAudio.addEventListener('seeked', handleSync);
+        alertAudio.addEventListener('playing', onSync);
+        alertAudio.addEventListener('seeked', onSync);
+
+        // Keep visual animations synchronized with audio playback time without double-speed drift
+        alertAudio.addEventListener('timeupdate', () => {
+            if (!isEmergencyActive || !alertAudio || alertAudio.paused) return;
+            const targetMs = (alertAudio.currentTime % ALERT_CYCLE_SECONDS) * 1000;
+            if (typeof document.getAnimations === 'function') {
+                const anims = document.getAnimations();
+                anims.forEach(anim => {
+                    const name = anim.animationName || '';
+                    if (name.includes('Strobe') || name.includes('Pulse') || name.includes('Glow') || name.includes('emergency') || name.includes('Emergency')) {
+                        const cur = anim.currentTime || 0;
+                        if (Math.abs(cur - targetMs) > 100) {
+                            anim.currentTime = targetMs;
+                        }
+                    }
+                });
+            }
+        });
     }
     return alertAudio;
 }
 
-function syncEmergencyAnimationPhase(audioEl) {
+function syncAnimationsToAudio(audioEl) {
     if (!audioEl) return;
-    const curTime = audioEl.currentTime || 0;
-    // Calculate negative offset so CSS animation phase matches audio.currentTime exactly
-    const phaseOffset = -(curTime % ALERT_CYCLE_SECONDS);
-    document.documentElement.style.setProperty('--alert-phase-offset', `${phaseOffset.toFixed(3)}s`);
+    const targetMs = (audioEl.currentTime % ALERT_CYCLE_SECONDS) * 1000;
+    if (typeof document.getAnimations === 'function') {
+        const anims = document.getAnimations();
+        anims.forEach(anim => {
+            const name = anim.animationName || '';
+            if (name.includes('Strobe') || name.includes('Pulse') || name.includes('Glow') || name.includes('emergency') || name.includes('Emergency')) {
+                anim.currentTime = targetMs;
+            }
+        });
+    }
 }
 
 function startAudioAlert() {
@@ -637,32 +653,34 @@ function startAudioAlert() {
 
     try {
         const audio = getAlertAudio();
-        if (audio) {
-            audio.loop = true;
-            audio.muted = false;
+        if (!audio) return;
 
-            // If audio is paused or just starting, rewind to 0 to align with initial visual flash
-            if (audio.paused || audio.currentTime === 0 || audio.ended) {
-                audio.currentTime = 0;
-                document.documentElement.style.setProperty('--alert-phase-offset', '0s');
-            }
+        audio.loop = true;
+        audio.muted = false;
 
-            const playPromise = audio.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    stopFallbackWebAudioSiren();
-                    syncEmergencyAnimationPhase(audio);
-                }).catch(err => {
-                    console.warn("Audio autoplay blocked by browser policy, using fallback siren:", err);
-                    playFallbackWebAudioSiren();
-                });
-            }
-        } else {
-            playFallbackWebAudioSiren();
+        // Reset cleanly to 0 so audio and visuals start at phase 0 simultaneously
+        if (audio.paused || audio.ended) {
+            audio.currentTime = 0;
+        }
+
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                syncAnimationsToAudio(audio);
+            }).catch(err => {
+                console.warn("Audio alert waiting for user interaction or asset load:", err);
+                const onCanPlay = () => {
+                    audio.removeEventListener('canplay', onCanPlay);
+                    if (isEmergencyActive && !isAudioMuted) {
+                        audio.currentTime = 0;
+                        audio.play().then(() => syncAnimationsToAudio(audio)).catch(() => {});
+                    }
+                };
+                audio.addEventListener('canplay', onCanPlay, { once: true });
+            });
         }
     } catch (e) {
-        console.warn("Audio alert start warning:", e);
-        playFallbackWebAudioSiren();
+        console.warn("Audio alert start exception:", e);
     }
 }
 
@@ -671,13 +689,11 @@ function stopAudioAlert() {
         const audio = getAlertAudio();
         if (audio) {
             audio.pause();
-            audio.currentTime = 0; // Rewind cleanly to beginning
+            audio.currentTime = 0;
         }
     } catch (e) {
         // ignore
     }
-    document.documentElement.style.setProperty('--alert-phase-offset', '0s');
-    stopFallbackWebAudioSiren();
 }
 
 function toggleMuteAudio() {
@@ -694,7 +710,6 @@ function toggleMuteAudio() {
         if (audio) {
             audio.pause();
         }
-        stopFallbackWebAudioSiren();
         if (muteIcon) muteIcon.className = 'fas fa-volume-xmark';
         if (muteText) muteText.textContent = 'Unmute';
     } else {
@@ -702,73 +717,6 @@ function toggleMuteAudio() {
         if (muteText) muteText.textContent = 'Mute';
         if (isEmergencyActive) {
             startAudioAlert();
-        }
-    }
-}
-
-function playFallbackWebAudioSiren() {
-    if (isAudioMuted || fallbackSirenInterval) return;
-
-    try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!fallbackAudioContext) fallbackAudioContext = new AudioContext();
-
-        if (fallbackAudioContext.state === 'suspended') {
-            fallbackAudioContext.resume().catch(() => {});
-        }
-
-        if (!fallbackMasterGain) {
-            fallbackMasterGain = fallbackAudioContext.createGain();
-            fallbackMasterGain.connect(fallbackAudioContext.destination);
-        }
-        fallbackMasterGain.gain.setValueAtTime(0.25, fallbackAudioContext.currentTime);
-
-        function playTripleBeep() {
-            if (isAudioMuted || !isEmergencyActive) return;
-            if (fallbackAudioContext && fallbackAudioContext.state === 'suspended') {
-                fallbackAudioContext.resume().catch(() => {});
-            }
-
-            const now = fallbackAudioContext.currentTime;
-            // 3 synchronized beeps matching alert.mp3 at +0.32s, +0.40s, +0.48s with ~1300Hz tone
-            const beepOffsets = [0.32, 0.40, 0.48];
-            beepOffsets.forEach(offset => {
-                const osc = fallbackAudioContext.createOscillator();
-                const gain = fallbackAudioContext.createGain();
-
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(1300, now + offset);
-                osc.frequency.exponentialRampToValueAtTime(1200, now + offset + 0.06);
-
-                gain.gain.setValueAtTime(0.001, now + offset);
-                gain.gain.linearRampToValueAtTime(0.22, now + offset + 0.01);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.065);
-
-                osc.connect(gain);
-                gain.connect(fallbackMasterGain);
-
-                osc.start(now + offset);
-                osc.stop(now + offset + 0.07);
-            });
-        }
-
-        playTripleBeep();
-        fallbackSirenInterval = setInterval(playTripleBeep, 2005);
-    } catch (e) {
-        console.warn("Audio Context init note:", e);
-    }
-}
-
-function stopFallbackWebAudioSiren() {
-    if (fallbackSirenInterval) {
-        clearInterval(fallbackSirenInterval);
-        fallbackSirenInterval = null;
-    }
-    if (fallbackMasterGain && fallbackAudioContext) {
-        try {
-            fallbackMasterGain.gain.setValueAtTime(0, fallbackAudioContext.currentTime);
-        } catch (e) {
-            // ignore
         }
     }
 }
