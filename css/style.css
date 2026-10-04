@@ -44,7 +44,6 @@
     --emergency-glow: rgba(255, 23, 68, 0.85);
     --emergency-border: rgba(255, 23, 68, 0.65);
     --alert-cycle: 2.005s;
-    --alert-phase-offset: 0s;
 }
 
 /* ---------- Global Reset & Base ---------- */
@@ -110,32 +109,19 @@ body.emergency-mode {
     background-attachment: scroll !important;
     box-shadow: inset 0 0 140px rgba(255, 23, 68, 0.45) !important;
     animation: screenStrobeVignette var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 @keyframes screenStrobeVignette {
-    0%, 13% {
+    0%, 15% {
         box-shadow: inset 0 0 90px rgba(255, 23, 68, 0.30);
     }
-    17% {
-        box-shadow: inset 0 0 180px rgba(255, 23, 68, 0.78), inset 0 0 40px rgba(255, 23, 68, 0.3);
+    17%, 26% {
+        box-shadow: inset 0 0 220px rgba(255, 23, 68, 0.95), inset 0 0 60px rgba(255, 255, 255, 0.25);
     }
-    19% {
-        box-shadow: inset 0 0 110px rgba(255, 23, 68, 0.45);
+    38% {
+        box-shadow: inset 0 0 130px rgba(255, 23, 68, 0.50);
     }
-    21% {
-        box-shadow: inset 0 0 195px rgba(255, 23, 68, 0.85), inset 0 0 50px rgba(255, 23, 68, 0.35);
-    }
-    23% {
-        box-shadow: inset 0 0 120px rgba(255, 23, 68, 0.50);
-    }
-    25% {
-        box-shadow: inset 0 0 220px rgba(255, 23, 68, 0.95), inset 0 0 70px rgba(255, 255, 255, 0.25);
-    }
-    32% {
-        box-shadow: inset 0 0 140px rgba(255, 23, 68, 0.55);
-    }
-    42%, 100% {
+    45%, 100% {
         box-shadow: inset 0 0 90px rgba(255, 23, 68, 0.30);
     }
 }
@@ -150,7 +136,6 @@ body.emergency-mode .brand-logo-hex {
     background: linear-gradient(135deg, #b91c1c, #ff1744) !important;
     box-shadow: 0 0 20px var(--emergency-glow) !important;
     animation: simPulse var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 body.emergency-mode .brand-highlight {
@@ -171,7 +156,6 @@ body.emergency-mode .brand-highlight {
     top: 0;
     z-index: 1000;
     animation: emergencyBarPulse var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 body.emergency-mode .emergency-bar {
@@ -179,35 +163,19 @@ body.emergency-mode .emergency-bar {
 }
 
 @keyframes emergencyBarPulse {
-    0%, 13% {
+    0%, 15% {
         background: linear-gradient(90deg, #4c070e 0%, #881320 50%, #4c070e 100%);
         box-shadow: 0 4px 18px rgba(220, 38, 38, 0.45);
     }
-    17% {
-        background: linear-gradient(90deg, #881320 0%, #ff1744 50%, #881320 100%);
-        box-shadow: 0 4px 35px rgba(255, 23, 68, 0.9), 0 0 20px #ff1744;
-    }
-    19% {
-        background: linear-gradient(90deg, #590912 0%, #b91c1c 50%, #590912 100%);
-        box-shadow: 0 4px 22px rgba(220, 38, 38, 0.6);
-    }
-    21% {
-        background: linear-gradient(90deg, #991b1b 0%, #ff1744 50%, #991b1b 100%);
-        box-shadow: 0 4px 42px rgba(255, 23, 68, 0.95), 0 0 25px #ff1744;
-    }
-    23% {
-        background: linear-gradient(90deg, #590912 0%, #b91c1c 50%, #590912 100%);
-        box-shadow: 0 4px 24px rgba(220, 38, 38, 0.65);
-    }
-    25% {
+    17%, 26% {
         background: linear-gradient(90deg, #b91c1c 0%, #ff2d55 50%, #b91c1c 100%);
         box-shadow: 0 4px 50px rgba(255, 23, 68, 1), 0 0 35px #ffffff;
     }
-    32% {
+    38% {
         background: linear-gradient(90deg, #700f1a 0%, #dc2626 50%, #700f1a 100%);
-        box-shadow: 0 4px 28px rgba(220, 38, 38, 0.7);
+        box-shadow: 0 4px 26px rgba(220, 38, 38, 0.65);
     }
-    42%, 100% {
+    45%, 100% {
         background: linear-gradient(90deg, #4c070e 0%, #881320 50%, #4c070e 100%);
         box-shadow: 0 4px 18px rgba(220, 38, 38, 0.45);
     }
@@ -227,46 +195,25 @@ body.emergency-mode .emergency-bar {
     font-size: 24px;
     color: #fff;
     animation: sirenStrobe var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 @keyframes sirenStrobe {
-    0%, 13% {
+    0%, 15% {
         transform: scale(1) rotate(0deg);
         filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.35));
         opacity: 0.88;
     }
-    17% {
-        transform: scale(1.24) rotate(-8deg);
-        filter: drop-shadow(0 0 20px #ff1744) drop-shadow(0 0 28px #fff);
+    17%, 26% {
+        transform: scale(1.35) rotate(-6deg);
+        filter: drop-shadow(0 0 30px #ff1744) drop-shadow(0 0 40px #ffffff);
         opacity: 1;
     }
-    19% {
-        transform: scale(1.08) rotate(0deg);
-        filter: drop-shadow(0 0 8px #ff1744);
-        opacity: 0.92;
-    }
-    21% {
-        transform: scale(1.30) rotate(8deg);
-        filter: drop-shadow(0 0 24px #ff1744) drop-shadow(0 0 32px #fff);
-        opacity: 1;
-    }
-    23% {
+    38% {
         transform: scale(1.10) rotate(0deg);
-        filter: drop-shadow(0 0 10px #ff1744);
-        opacity: 0.92;
-    }
-    25% {
-        transform: scale(1.38) rotate(-6deg);
-        filter: drop-shadow(0 0 30px #ff1744) drop-shadow(0 0 40px #fff);
-        opacity: 1;
-    }
-    32% {
-        transform: scale(1.12) rotate(0deg);
         filter: drop-shadow(0 0 12px #ff1744);
         opacity: 0.95;
     }
-    42%, 100% {
+    45%, 100% {
         transform: scale(1) rotate(0deg);
         filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.35));
         opacity: 0.88;
@@ -461,39 +408,22 @@ body.emergency-mode .emergency-bar {
     color: #ffffff;
     border-color: #ff8095;
     animation: simPulse var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 @keyframes simPulse {
-    0%, 13% {
+    0%, 15% {
         box-shadow: 0 0 6px var(--emergency-glow);
         transform: scale(1);
     }
-    17% {
-        box-shadow: 0 0 22px var(--emergency-glow), 0 0 8px #fff;
-        transform: scale(1.05);
+    17%, 26% {
+        box-shadow: 0 0 32px var(--emergency-glow), 0 0 16px #ffffff;
+        transform: scale(1.08);
     }
-    19% {
-        box-shadow: 0 0 10px var(--emergency-glow);
-        transform: scale(1.01);
-    }
-    21% {
-        box-shadow: 0 0 25px var(--emergency-glow), 0 0 10px #fff;
-        transform: scale(1.06);
-    }
-    23% {
+    38% {
         box-shadow: 0 0 12px var(--emergency-glow);
         transform: scale(1.02);
     }
-    25% {
-        box-shadow: 0 0 32px var(--emergency-glow), 0 0 16px #fff;
-        transform: scale(1.08);
-    }
-    32% {
-        box-shadow: 0 0 14px var(--emergency-glow);
-        transform: scale(1.02);
-    }
-    42%, 100% {
+    45%, 100% {
         box-shadow: 0 0 6px var(--emergency-glow);
         transform: scale(1);
     }
@@ -647,39 +577,22 @@ body.emergency-mode .status-banner {
     border-color: rgba(255, 23, 68, 0.6) !important;
     background: rgba(255, 23, 68, 0.12) !important;
     animation: emergencyBannerGlow var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 @keyframes emergencyBannerGlow {
-    0%, 13% {
+    0%, 15% {
         border-color: rgba(255, 23, 68, 0.45);
         box-shadow: 0 0 10px rgba(255, 23, 68, 0.15);
     }
-    17% {
-        border-color: rgba(255, 23, 68, 0.95);
-        box-shadow: 0 0 28px rgba(255, 23, 68, 0.6);
-    }
-    19% {
-        border-color: rgba(255, 23, 68, 0.55);
-        box-shadow: 0 0 14px rgba(255, 23, 68, 0.25);
-    }
-    21% {
-        border-color: rgba(255, 23, 68, 1);
-        box-shadow: 0 0 35px rgba(255, 23, 68, 0.75);
-    }
-    23% {
-        border-color: rgba(255, 23, 68, 0.60);
-        box-shadow: 0 0 16px rgba(255, 23, 68, 0.3);
-    }
-    25% {
+    17%, 26% {
         border-color: #ff2d55;
         box-shadow: 0 0 45px rgba(255, 23, 68, 0.9), 0 0 15px rgba(255, 255, 255, 0.4);
     }
-    32% {
-        border-color: rgba(255, 23, 68, 0.7);
-        box-shadow: 0 0 20px rgba(255, 23, 68, 0.4);
+    38% {
+        border-color: rgba(255, 23, 68, 0.65);
+        box-shadow: 0 0 18px rgba(255, 23, 68, 0.35);
     }
-    42%, 100% {
+    45%, 100% {
         border-color: rgba(255, 23, 68, 0.45);
         box-shadow: 0 0 10px rgba(255, 23, 68, 0.15);
     }
@@ -690,7 +603,6 @@ body.emergency-mode .banner-icon-box {
     color: var(--emergency-crimson) !important;
     background: rgba(255, 23, 68, 0.2) !important;
     animation: sirenStrobe var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 /* ==========================================================================
@@ -940,47 +852,26 @@ body.emergency-mode .banner-icon-box {
     border-color: var(--emergency-crimson) !important;
     background: linear-gradient(145deg, #26050b 0%, #120205 100%) !important;
     animation: emergencyCardPulse var(--alert-cycle, 2.005s) ease-out infinite !important;
-    animation-delay: var(--alert-phase-offset, 0s) !important;
     z-index: 10;
 }
 
 @keyframes emergencyCardPulse {
-    0%, 13% {
+    0%, 15% {
         border-color: rgba(239, 68, 68, 0.6);
         box-shadow: 0 0 18px rgba(255, 23, 68, 0.35), inset 0 0 15px rgba(255, 23, 68, 0.15);
         transform: translateY(-2px) scale(1.01);
     }
-    17% {
-        border-color: #ff1744;
-        box-shadow: 0 0 42px rgba(255, 23, 68, 0.85), inset 0 0 32px rgba(255, 23, 68, 0.35);
-        transform: translateY(-5px) scale(1.03);
-    }
-    19% {
-        border-color: rgba(239, 68, 68, 0.7);
-        box-shadow: 0 0 24px rgba(255, 23, 68, 0.5), inset 0 0 20px rgba(255, 23, 68, 0.2);
-        transform: translateY(-3px) scale(1.015);
-    }
-    21% {
-        border-color: #ff1744;
-        box-shadow: 0 0 50px rgba(255, 23, 68, 0.92), inset 0 0 38px rgba(255, 23, 68, 0.4);
-        transform: translateY(-6px) scale(1.036);
-    }
-    23% {
-        border-color: rgba(239, 68, 68, 0.75);
-        box-shadow: 0 0 26px rgba(255, 23, 68, 0.55), inset 0 0 22px rgba(255, 23, 68, 0.22);
-        transform: translateY(-3px) scale(1.018);
-    }
-    25% {
+    17%, 26% {
         border-color: #ff2d55;
         box-shadow: 0 0 65px rgba(255, 23, 68, 1), inset 0 0 48px rgba(255, 23, 68, 0.52);
         transform: translateY(-7px) scale(1.042);
     }
-    32% {
+    38% {
         border-color: #ef4444;
-        box-shadow: 0 0 30px rgba(255, 23, 68, 0.65), inset 0 0 24px rgba(255, 23, 68, 0.25);
+        box-shadow: 0 0 28px rgba(255, 23, 68, 0.60), inset 0 0 22px rgba(255, 23, 68, 0.22);
         transform: translateY(-4px) scale(1.02);
     }
-    42%, 100% {
+    45%, 100% {
         border-color: rgba(239, 68, 68, 0.6);
         box-shadow: 0 0 18px rgba(255, 23, 68, 0.35), inset 0 0 15px rgba(255, 23, 68, 0.15);
         transform: translateY(-2px) scale(1.01);
@@ -992,46 +883,25 @@ body.emergency-mode .banner-icon-box {
     align-items: center;
     gap: 4px;
     animation: alertStrobe var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 @keyframes alertStrobe {
-    0%, 13% {
+    0%, 15% {
         opacity: 0.65;
         transform: scale(0.96);
         box-shadow: 0 0 6px rgba(255, 23, 68, 0.3);
     }
-    17% {
-        opacity: 1;
-        transform: scale(1.08);
-        box-shadow: 0 0 20px rgba(255, 23, 68, 0.9);
-    }
-    19% {
-        opacity: 0.75;
-        transform: scale(1.0);
-        box-shadow: 0 0 8px rgba(255, 23, 68, 0.4);
-    }
-    21% {
-        opacity: 1;
-        transform: scale(1.11);
-        box-shadow: 0 0 24px rgba(255, 23, 68, 0.95);
-    }
-    23% {
-        opacity: 0.8;
-        transform: scale(1.01);
-        box-shadow: 0 0 10px rgba(255, 23, 68, 0.45);
-    }
-    25% {
+    17%, 26% {
         opacity: 1;
         transform: scale(1.15);
         box-shadow: 0 0 30px rgba(255, 23, 68, 1), 0 0 8px #ffffff;
     }
-    32% {
+    38% {
         opacity: 0.85;
         transform: scale(1.03);
-        box-shadow: 0 0 14px rgba(255, 23, 68, 0.55);
+        box-shadow: 0 0 12px rgba(255, 23, 68, 0.50);
     }
-    42%, 100% {
+    45%, 100% {
         opacity: 0.65;
         transform: scale(0.96);
         box-shadow: 0 0 6px rgba(255, 23, 68, 0.3);
@@ -1055,7 +925,6 @@ body.emergency-mode .banner-icon-box {
     text-shadow: 0 0 20px rgba(255, 23, 68, 0.8);
     filter: drop-shadow(0 0 10px rgba(255, 23, 68, 0.9)) !important;
     animation: textEmergencyStrobe var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 .gauge-card.emergency-blink .gauge-display-plate {
@@ -1069,42 +938,22 @@ body.emergency-mode .banner-icon-box {
 }
 
 @keyframes textEmergencyStrobe {
-    0%, 13% {
+    0%, 15% {
         opacity: 0.82;
         transform: scale(1);
         text-shadow: 0 0 12px rgba(255, 23, 68, 0.6);
     }
-    17% {
-        opacity: 1;
-        transform: scale(1.07);
-        text-shadow: 0 0 28px rgba(255, 23, 68, 1), 0 0 12px #ffffff;
-    }
-    19% {
-        opacity: 0.88;
-        transform: scale(1.02);
-        text-shadow: 0 0 16px rgba(255, 23, 68, 0.7);
-    }
-    21% {
-        opacity: 1;
-        transform: scale(1.09);
-        text-shadow: 0 0 32px rgba(255, 23, 68, 1), 0 0 15px #ffffff;
-    }
-    23% {
-        opacity: 0.90;
-        transform: scale(1.03);
-        text-shadow: 0 0 18px rgba(255, 23, 68, 0.75);
-    }
-    25% {
+    17%, 26% {
         opacity: 1;
         transform: scale(1.13);
         text-shadow: 0 0 40px rgba(255, 23, 68, 1), 0 0 20px #ffffff;
     }
-    32% {
-        opacity: 0.92;
-        transform: scale(1.04);
-        text-shadow: 0 0 20px rgba(255, 23, 68, 0.8);
+    38% {
+        opacity: 0.90;
+        transform: scale(1.03);
+        text-shadow: 0 0 18px rgba(255, 23, 68, 0.75);
     }
-    42%, 100% {
+    45%, 100% {
         opacity: 0.82;
         transform: scale(1);
         text-shadow: 0 0 12px rgba(255, 23, 68, 0.6);
@@ -1171,7 +1020,6 @@ body.emergency-mode .emergency-dispatch-icon,
     border-color: #ff8095 !important;
     box-shadow: 0 0 24px var(--emergency-glow) !important;
     animation: sirenStrobe var(--alert-cycle, 2.005s) ease-out infinite !important;
-    animation-delay: var(--alert-phase-offset, 0s) !important;
 }
 
 .info-details {
@@ -1277,6 +1125,13 @@ body.emergency-mode .emergency-dispatch-icon,
     border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.stream-status-pill.stream-offline {
+    background: rgba(100, 116, 139, 0.12);
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    color: var(--text-muted);
 }
 
 .pulse-ring {
@@ -1286,6 +1141,14 @@ body.emergency-mode .emergency-dispatch-icon,
     background: var(--accent-emerald);
     box-shadow: 0 0 10px var(--accent-emerald);
     animation: ringPulse 1.5s infinite;
+}
+
+.offline-ring {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #64748b;
+    box-shadow: 0 0 6px rgba(100, 116, 139, 0.4);
 }
 
 @keyframes ringPulse {
@@ -1408,6 +1271,67 @@ body.emergency-mode .emergency-dispatch-icon,
     position: relative;
     width: 100%;
     height: 340px;
+    overflow: hidden;
+    border-radius: 10px;
+}
+
+.chart-offline-overlay {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(13, 15, 22, 0.90) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border-radius: 10px;
+    text-align: center;
+    padding: 20px;
+    z-index: 10;
+    pointer-events: none;
+    box-sizing: border-box;
+    transition: opacity 0.3s ease;
+}
+
+.chart-offline-overlay i.fa-plug-circle-xmark {
+    font-size: 34px;
+    color: #64748b;
+    margin-bottom: 12px;
+}
+
+.chart-offline-overlay h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #cbd5e1;
+    margin: 0 0 6px 0;
+    letter-spacing: 0.3px;
+}
+
+.chart-offline-overlay p {
+    font-size: 13px;
+    color: #94a3b8;
+    max-width: 420px;
+    margin: 0 0 12px 0;
+    line-height: 1.5;
+}
+
+.chart-offline-overlay .offline-tip {
+    font-size: 11px;
+    color: #64748b;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 5px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chart-offline-overlay .offline-tip b {
+    color: var(--accent-cyan);
 }
 
 /* ==========================================================================
@@ -1836,7 +1760,6 @@ body.emergency-mode .emergency-dispatch-icon,
     font-size: 26px;
     color: var(--emergency-crimson);
     animation: sirenStrobe var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 .toast-text strong {
@@ -2637,39 +2560,22 @@ button, a, input[type="range"] {
     background: linear-gradient(145deg, #26050b 0%, #100204 100%) !important;
     box-shadow: 0 0 50px rgba(255, 23, 68, 0.5), inset 0 0 30px rgba(255, 23, 68, 0.2) !important;
     animation: simBoxEmergencyPulse var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 @keyframes simBoxEmergencyPulse {
-    0%, 13% {
+    0%, 15% {
         border-color: var(--emergency-crimson);
         box-shadow: 0 0 35px rgba(255, 23, 68, 0.35), inset 0 0 20px rgba(255, 23, 68, 0.15);
     }
-    17% {
-        border-color: #ff2d55;
-        box-shadow: 0 0 65px rgba(255, 23, 68, 0.8), inset 0 0 35px rgba(255, 23, 68, 0.35);
-    }
-    19% {
-        border-color: var(--emergency-crimson);
-        box-shadow: 0 0 42px rgba(255, 23, 68, 0.45), inset 0 0 24px rgba(255, 23, 68, 0.2);
-    }
-    21% {
-        border-color: #ff2d55;
-        box-shadow: 0 0 75px rgba(255, 23, 68, 0.9), inset 0 0 40px rgba(255, 23, 68, 0.4);
-    }
-    23% {
-        border-color: var(--emergency-crimson);
-        box-shadow: 0 0 45px rgba(255, 23, 68, 0.5), inset 0 0 26px rgba(255, 23, 68, 0.22);
-    }
-    25% {
+    17%, 26% {
         border-color: #ff2d55;
         box-shadow: 0 0 90px rgba(255, 23, 68, 1), inset 0 0 50px rgba(255, 23, 68, 0.45);
     }
-    32% {
+    38% {
         border-color: var(--emergency-crimson);
-        box-shadow: 0 0 50px rgba(255, 23, 68, 0.6), inset 0 0 28px rgba(255, 23, 68, 0.25);
+        box-shadow: 0 0 45px rgba(255, 23, 68, 0.5), inset 0 0 26px rgba(255, 23, 68, 0.22);
     }
-    42%, 100% {
+    45%, 100% {
         border-color: var(--emergency-crimson);
         box-shadow: 0 0 35px rgba(255, 23, 68, 0.35), inset 0 0 20px rgba(255, 23, 68, 0.15);
     }
@@ -2848,39 +2754,22 @@ button, a, input[type="range"] {
     background: linear-gradient(180deg, rgba(55, 7, 14, 0.95) 0%, rgba(22, 3, 6, 0.98) 100%) !important;
     box-shadow: 0 0 25px rgba(255, 23, 68, 0.5) !important;
     animation: simCardEmergencyPulse var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 @keyframes simCardEmergencyPulse {
-    0%, 13% {
+    0%, 15% {
         box-shadow: 0 0 15px rgba(255, 23, 68, 0.35);
         border-color: rgba(239, 68, 68, 0.6);
     }
-    17% {
-        box-shadow: 0 0 36px rgba(255, 23, 68, 0.85);
-        border-color: #ff1744;
-    }
-    19% {
-        box-shadow: 0 0 20px rgba(255, 23, 68, 0.45);
-        border-color: rgba(239, 68, 68, 0.7);
-    }
-    21% {
-        box-shadow: 0 0 42px rgba(255, 23, 68, 0.92);
-        border-color: #ff1744;
-    }
-    23% {
-        box-shadow: 0 0 22px rgba(255, 23, 68, 0.50);
-        border-color: rgba(239, 68, 68, 0.75);
-    }
-    25% {
+    17%, 26% {
         box-shadow: 0 0 52px rgba(255, 23, 68, 1);
         border-color: #ff2d55;
     }
-    32% {
-        box-shadow: 0 0 26px rgba(255, 23, 68, 0.60);
+    38% {
+        box-shadow: 0 0 24px rgba(255, 23, 68, 0.50);
         border-color: #ef4444;
     }
-    42%, 100% {
+    45%, 100% {
         box-shadow: 0 0 15px rgba(255, 23, 68, 0.35);
         border-color: rgba(239, 68, 68, 0.6);
     }
@@ -2958,7 +2847,6 @@ button, a, input[type="range"] {
     border-color: var(--emergency-crimson);
     font-weight: 700;
     animation: alertStrobe var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 .sim-badge {
@@ -2981,7 +2869,6 @@ button, a, input[type="range"] {
     border-color: var(--emergency-crimson);
     color: var(--emergency-crimson);
     animation: alertStrobe var(--alert-cycle, 2.005s) ease-out infinite;
-    animation-delay: var(--alert-phase-offset, 0s);
 }
 
 /* ---------- Dedicated Login Banner Card ---------- */

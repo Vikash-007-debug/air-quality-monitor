@@ -185,21 +185,79 @@ function updateStatus(id, percent) {
 // ==========================================================================
 // BATTERY & SYSTEM DIAGNOSTICS
 // ==========================================================================
-function updateBattery(percent) {
-    percent = Math.max(0, Math.min(100, percent));
-
+/**
+ * Update Battery & Power System Diagnostics display
+ * Supports:
+ * - Direct percentage (0 - 100)
+ * - Direct voltage (2.5V - 4.5V or 5.0V USB)
+ * - Smart USB power detection when device is actively streaming without dedicated battery divider
+ */
+function updateBattery(rawBatt, rawVolt) {
     const bar = document.getElementById('batteryBar');
     const valueEl = document.getElementById('batteryValue');
     const voltageEl = document.getElementById('batteryVoltage');
     const iconEl = document.getElementById('batteryIcon');
+    const labelEl = document.getElementById('batteryLabel');
 
-    // Approximate Li-ion cell voltage: 3.2V (0%) to 4.2V (100%)
-    const estimatedVoltage = (3.20 + (percent / 100) * 1.00).toFixed(2);
-    if (voltageEl) voltageEl.textContent = `${estimatedVoltage}V`;
+    let percent = 0;
+    let voltage = 0;
+    let isUsbPower = false;
+
+    // 1. Sanitize incoming battery value
+    let num = Number(rawBatt);
+    if (isNaN(num)) num = 0;
+
+    // 2. Detect if value is passed as raw Voltage (e.g. 2.5V - 4.5V or 5.0V)
+    if (num > 0 && num <= 5.0) {
+        voltage = num;
+        if (voltage >= 4.8) {
+            isUsbPower = true;
+            percent = 100;
+        } else {
+            percent = Math.max(0, Math.min(100, ((voltage - 3.0) / 1.2) * 100));
+        }
+    } else {
+        percent = Math.max(0, Math.min(100, num));
+        if (rawVolt !== undefined && !isNaN(Number(rawVolt)) && Number(rawVolt) > 0) {
+            voltage = Number(rawVolt);
+            if (voltage >= 4.8) isUsbPower = true;
+        } else {
+            // Standard Li-ion discharge curve approximation (3.00V empty to 4.20V full)
+            voltage = Number((3.00 + (percent / 100) * 1.20).toFixed(2));
+        }
+    }
+
+    // 3. Smart USB / Mains Power Detection:
+    // If the ESP32 is actively communicating (isDeviceOnline === true) but the ADC reading is 0,
+    // the system is running on USB cable power / 5V rail without the optional GPIO 35 battery divider.
+    if ((isDeviceOnline || isSimulationActive) && percent === 0 && (!rawVolt || Number(rawVolt) <= 0)) {
+        isUsbPower = true;
+        percent = 100;
+        voltage = 5.00;
+    }
+
+    // 4. Update Header Label
+    if (labelEl) {
+        labelEl.textContent = isUsbPower ? 'Power Source (USB / Mains)' : 'Battery Level (18650 Li-ion)';
+    }
+
+    // 5. Update Voltage Display
+    if (voltageEl) {
+        voltageEl.textContent = isUsbPower ? '5.00V (USB)' : `${voltage.toFixed(2)}V`;
+    }
+
+    // 6. Update Percentage Display & Progress Bar
+    if (valueEl) {
+        if (isUsbPower) {
+            valueEl.innerHTML = `100% <small style="font-size:11px; color:var(--accent-emerald,#10b981); font-weight:600;">(USB)</small>`;
+        } else {
+            valueEl.textContent = `${Math.round(percent)}%`;
+        }
+    }
 
     if (bar) {
         bar.style.width = percent + '%';
-        if (percent > 60) {
+        if (isUsbPower || percent > 60) {
             bar.style.background = 'linear-gradient(90deg, #10b981, #06b6d4)';
         } else if (percent > 25) {
             bar.style.background = 'linear-gradient(90deg, #f59e0b, #f97316)';
@@ -208,15 +266,19 @@ function updateBattery(percent) {
         }
     }
 
-    if (valueEl) valueEl.textContent = Math.round(percent) + '%';
-
+    // 7. Update Battery / Power Icon
     if (iconEl) {
-        iconEl.className = 'fas ';
-        if (percent > 80) iconEl.className += 'fa-battery-full';
-        else if (percent > 55) iconEl.className += 'fa-battery-three-quarters';
-        else if (percent > 30) iconEl.className += 'fa-battery-half';
-        else if (percent > 10) iconEl.className += 'fa-battery-quarter';
-        else iconEl.className += 'fa-battery-empty';
+        if (isUsbPower) {
+            iconEl.className = 'fas fa-plug';
+            iconEl.style.color = 'var(--accent-emerald, #10b981)';
+        } else {
+            iconEl.style.color = '';
+            if (percent > 80) iconEl.className = 'fas fa-battery-full';
+            else if (percent > 55) iconEl.className = 'fas fa-battery-three-quarters';
+            else if (percent > 30) iconEl.className = 'fas fa-battery-half';
+            else if (percent > 10) iconEl.className = 'fas fa-battery-quarter';
+            else iconEl.className = 'fas fa-battery-empty';
+        }
     }
 }
 
@@ -352,18 +414,23 @@ function resetGaugesToZero() {
         resetEmergencyState();
     }
 
-    // 7. Reset Battery Diagnostics to 0
+    // 7. Reset Battery Diagnostics to 0 (Offline)
     const batteryVal = document.getElementById('batteryValue');
     const batteryVolt = document.getElementById('batteryVoltage');
     const batteryBar = document.getElementById('batteryBar');
     const batteryIcon = document.getElementById('batteryIcon');
+    const batteryLabel = document.getElementById('batteryLabel');
+    if (batteryLabel) batteryLabel.textContent = 'Battery Level (18650 Li-ion)';
     if (batteryVal) batteryVal.textContent = '0%';
     if (batteryVolt) batteryVolt.textContent = '0.00V';
     if (batteryBar) {
         batteryBar.style.width = '0%';
         batteryBar.style.background = '#475569';
     }
-    if (batteryIcon) batteryIcon.className = 'fas fa-battery-empty';
+    if (batteryIcon) {
+        batteryIcon.className = 'fas fa-battery-empty';
+        batteryIcon.style.color = '';
+    }
 
     // 8. Reset Live Stat Cards (Tab 2) current values to offline indicators
     const statGas = document.getElementById('statCurrentGas');
@@ -1747,7 +1814,7 @@ function processTelemetryPayload(data) {
     // If user is actively running the Test Alert simulation, record telemetry in buffer/battery
     // but do NOT overwrite simulated emergency gauges or hazard mode on screen!
     if (isSimulationActive) {
-        if (data.battery !== undefined) updateBattery(data.battery);
+        updateBattery(data.battery !== undefined ? data.battery : 92, data.voltage);
         recordTelemetryPoint(temp, humid, gas);
         updateTimestamp();
         return;
@@ -1761,10 +1828,8 @@ function processTelemetryPayload(data) {
     // 2. Evaluate Emergency Hazard Thresholds
     evaluateEmergencyConditions(temp, humid, gas);
 
-    // 3. Update Li-ion Battery
-    if (data.battery !== undefined) {
-        updateBattery(data.battery);
-    }
+    // 3. Update Li-ion Battery & Power Diagnostics
+    updateBattery(data.battery, data.voltage);
 
     // 4. Record Telemetry in Waveform Charts & Stats
     recordTelemetryPoint(temp, humid, gas);
