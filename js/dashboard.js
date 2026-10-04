@@ -189,8 +189,8 @@ function updateStatus(id, percent) {
  * Update Battery & Power System Diagnostics display
  * Supports:
  * - Direct percentage (0 - 100)
- * - Direct voltage (2.5V - 4.5V or 5.0V USB)
- * - Smart USB power detection when device is actively streaming without dedicated battery divider
+ * - Direct voltage (2.5V - 4.5V or 5.0V Boosted Rail)
+ * - Smart 5V Power Rail detection (Battery via MT3608 or USB)
  */
 function updateBattery(rawBatt, rawVolt) {
     const bar = document.getElementById('batteryBar');
@@ -198,58 +198,67 @@ function updateBattery(rawBatt, rawVolt) {
     const voltageEl = document.getElementById('batteryVoltage');
     const iconEl = document.getElementById('batteryIcon');
     const labelEl = document.getElementById('batteryLabel');
+    const noteEl = document.getElementById('batteryStatusNote');
 
     let percent = 0;
     let voltage = 0;
-    let isUsbPower = false;
+    let is5VRail = false;
 
-    // 1. Sanitize incoming battery value
+    // 1. Sanitize incoming values
     let num = Number(rawBatt);
     if (isNaN(num)) num = 0;
 
-    // 2. Detect if value is passed as raw Voltage (e.g. 2.5V - 4.5V or 5.0V)
-    if (num > 0 && num <= 5.0) {
+    let volt = Number(rawVolt);
+    if (isNaN(volt)) volt = 0;
+
+    // 2. Check if voltage was passed
+    if (volt > 0) {
+        voltage = volt;
+        if (voltage >= 4.5) {
+            is5VRail = true;
+            percent = 100;
+        } else {
+            percent = Math.max(0, Math.min(100, ((voltage - 3.0) / 1.2) * 100));
+        }
+    } else if (num > 0 && num <= 5.0) {
         voltage = num;
-        if (voltage >= 4.8) {
-            isUsbPower = true;
+        if (voltage >= 4.5) {
+            is5VRail = true;
             percent = 100;
         } else {
             percent = Math.max(0, Math.min(100, ((voltage - 3.0) / 1.2) * 100));
         }
     } else {
         percent = Math.max(0, Math.min(100, num));
-        if (rawVolt !== undefined && !isNaN(Number(rawVolt)) && Number(rawVolt) > 0) {
-            voltage = Number(rawVolt);
-            if (voltage >= 4.8) isUsbPower = true;
+        if (percent === 100 && (volt >= 4.5 || volt === 0)) {
+            is5VRail = true;
+            voltage = 5.00;
         } else {
-            // Standard Li-ion discharge curve approximation (3.00V empty to 4.20V full)
             voltage = Number((3.00 + (percent / 100) * 1.20).toFixed(2));
         }
     }
 
-    // 3. Smart USB / Mains Power Detection:
-    // If the ESP32 is actively communicating (isDeviceOnline === true) but the ADC reading is 0,
-    // the system is running on USB cable power / 5V rail without the optional GPIO 35 battery divider.
-    if ((isDeviceOnline || isSimulationActive) && percent === 0 && (!rawVolt || Number(rawVolt) <= 0)) {
-        isUsbPower = true;
+    // 3. Fallback: If device is online but reading is 0, device is powered via 5V rail
+    if ((isDeviceOnline || isSimulationActive) && percent === 0 && voltage <= 0) {
+        is5VRail = true;
         percent = 100;
         voltage = 5.00;
     }
 
     // 4. Update Header Label
     if (labelEl) {
-        labelEl.textContent = isUsbPower ? 'Power Source (USB / Mains)' : 'Battery Level (18650 Li-ion)';
+        labelEl.textContent = is5VRail ? 'Battery / Power System' : 'Battery Level (18650 Li-ion)';
     }
 
     // 5. Update Voltage Display
     if (voltageEl) {
-        voltageEl.textContent = isUsbPower ? '5.00V (USB)' : `${voltage.toFixed(2)}V`;
+        voltageEl.textContent = is5VRail ? '5.00V (5V Rail)' : `${voltage.toFixed(2)}V`;
     }
 
     // 6. Update Percentage Display & Progress Bar
     if (valueEl) {
-        if (isUsbPower) {
-            valueEl.innerHTML = `100% <small style="font-size:11px; color:var(--accent-emerald,#10b981); font-weight:600;">(USB)</small>`;
+        if (is5VRail) {
+            valueEl.innerHTML = `100% <small style="font-size:11px; color:var(--accent-emerald,#10b981); font-weight:600;">(Active)</small>`;
         } else {
             valueEl.textContent = `${Math.round(percent)}%`;
         }
@@ -257,7 +266,7 @@ function updateBattery(rawBatt, rawVolt) {
 
     if (bar) {
         bar.style.width = percent + '%';
-        if (isUsbPower || percent > 60) {
+        if (is5VRail || percent > 60) {
             bar.style.background = 'linear-gradient(90deg, #10b981, #06b6d4)';
         } else if (percent > 25) {
             bar.style.background = 'linear-gradient(90deg, #f59e0b, #f97316)';
@@ -266,18 +275,33 @@ function updateBattery(rawBatt, rawVolt) {
         }
     }
 
-    // 7. Update Battery / Power Icon
+    // 7. Update Battery Icon (Always a battery icon, never a misleading USB plug!)
     if (iconEl) {
-        if (isUsbPower) {
-            iconEl.className = 'fas fa-plug';
+        iconEl.style.color = '';
+        if (is5VRail || percent > 80) {
+            iconEl.className = 'fas fa-battery-full';
             iconEl.style.color = 'var(--accent-emerald, #10b981)';
+        } else if (percent > 55) {
+            iconEl.className = 'fas fa-battery-three-quarters';
+        } else if (percent > 30) {
+            iconEl.className = 'fas fa-battery-half';
+        } else if (percent > 10) {
+            iconEl.className = 'fas fa-battery-quarter';
         } else {
-            iconEl.style.color = '';
-            if (percent > 80) iconEl.className = 'fas fa-battery-full';
-            else if (percent > 55) iconEl.className = 'fas fa-battery-three-quarters';
-            else if (percent > 30) iconEl.className = 'fas fa-battery-half';
-            else if (percent > 10) iconEl.className = 'fas fa-battery-quarter';
-            else iconEl.className = 'fas fa-battery-empty';
+            iconEl.className = 'fas fa-battery-empty';
+        }
+    }
+
+    // 8. Update Helpful Status Note
+    if (noteEl) {
+        if (!isDeviceOnline && !isSimulationActive) {
+            noteEl.style.display = 'none';
+        } else if (is5VRail) {
+            noteEl.style.display = 'block';
+            noteEl.innerHTML = '<i class="fas fa-circle-info"></i> Running on 5V power rail. Connect 18650(+) divider to GPIO 35 for live cell drainage %';
+        } else {
+            noteEl.style.display = 'block';
+            noteEl.innerHTML = `<i class="fas fa-check-circle" style="color:var(--accent-emerald,#10b981);"></i> Live 18650 cell monitoring active (${voltage.toFixed(2)}V)`;
         }
     }
 }
@@ -431,6 +455,8 @@ function resetGaugesToZero() {
         batteryIcon.className = 'fas fa-battery-empty';
         batteryIcon.style.color = '';
     }
+    const batteryStatusNote = document.getElementById('batteryStatusNote');
+    if (batteryStatusNote) batteryStatusNote.style.display = 'none';
 
     // 8. Reset Live Stat Cards (Tab 2) current values to offline indicators
     const statGas = document.getElementById('statCurrentGas');
