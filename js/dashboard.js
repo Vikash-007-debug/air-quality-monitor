@@ -365,13 +365,26 @@ function resetGaugesToZero() {
     }
     if (batteryIcon) batteryIcon.className = 'fas fa-battery-empty';
 
-    // 8. Reset Live Stat Cards (Tab 2) current values to zero
+    // 8. Reset Live Stat Cards (Tab 2) current values to offline indicators
     const statGas = document.getElementById('statCurrentGas');
     const statTemp = document.getElementById('statCurrentTemp');
     const statHumid = document.getElementById('statCurrentHumid');
-    if (statGas) statGas.innerHTML = `0 <small>PPM</small>`;
-    if (statTemp) statTemp.innerHTML = `0.0 <small>°C</small>`;
-    if (statHumid) statHumid.innerHTML = `0.0 <small>%</small>`;
+    if (statGas) statGas.innerHTML = `-- <small>PPM</small>`;
+    if (statTemp) statTemp.innerHTML = `-- <small>°C</small>`;
+    if (statHumid) statHumid.innerHTML = `-- <small>%</small>`;
+
+    // 9. Clear Live Streaming Waveform Chart (Tab 2) when offline
+    // Note: Tab 3 (Historical Archive) remains fully intact so users can view past sessions
+    if (liveChartInstance) {
+        liveChartInstance.data.labels = [];
+        liveChartInstance.data.datasets.forEach(ds => ds.data = []);
+        liveChartInstance.update();
+    }
+
+    const offlineOverlay = document.getElementById('liveChartOfflineOverlay');
+    if (offlineOverlay) {
+        offlineOverlay.style.display = 'flex';
+    }
 
     if (telemetryBuffer.timestamps.length === 0) {
         ['Gas', 'Temp', 'Humid'].forEach(s => {
@@ -399,7 +412,8 @@ function setConnectionStatus(isOnline, customMsg) {
     const instTitle = document.getElementById('instructionStatusTitle');
     const instDesc = document.getElementById('instructionStatusDesc');
 
-    const streamPill = document.querySelector('.stream-status-pill');
+    const streamPill = document.getElementById('streamStatusPill') || document.querySelector('.stream-status-pill');
+    const offlineOverlay = document.getElementById('liveChartOfflineOverlay');
 
     if (dot && text) {
         if (isOnline) {
@@ -418,7 +432,10 @@ function setConnectionStatus(isOnline, customMsg) {
             }
             if (streamPill) {
                 streamPill.className = 'stream-status-pill';
-                streamPill.innerHTML = '<span class="pulse-ring"></span> <span>Live Stream Active</span>';
+                streamPill.innerHTML = '<span class="pulse-ring"></span> <span>Live 3s Sampling</span>';
+            }
+            if (offlineOverlay) {
+                offlineOverlay.style.display = 'none';
             }
         } else {
             dot.className = 'status-dot offline';
@@ -436,7 +453,10 @@ function setConnectionStatus(isOnline, customMsg) {
             }
             if (streamPill) {
                 streamPill.className = 'stream-status-pill stream-offline';
-                streamPill.innerHTML = '<span class="status-dot offline"></span> <span>Stream Paused (Device Offline)</span>';
+                streamPill.innerHTML = '<span class="offline-ring"></span> <span>Stream Paused (Device Offline)</span>';
+            }
+            if (offlineOverlay) {
+                offlineOverlay.style.display = 'flex';
             }
         }
     }
@@ -1121,36 +1141,41 @@ function updateStatisticalSummary(currentTemp, currentHumid, currentGas) {
     const maxHumid = Math.max(...humidArr).toFixed(1);
     const avgHumid = (humidArr.reduce((a, b) => a + b, 0) / humidArr.length).toFixed(1);
 
-    // Update DOM
-    const statCurrentGas = document.getElementById('statCurrentGas');
+    // Update DOM: Min, Max, and Avg are historical metrics across the session
     const statMinGas = document.getElementById('statMinGas');
     const statMaxGas = document.getElementById('statMaxGas');
     const statAvgGas = document.getElementById('statAvgGas');
-
-    if (statCurrentGas) statCurrentGas.innerHTML = `${Math.round(currentGas)} <small>PPM</small>`;
     if (statMinGas) statMinGas.textContent = `${minGas} PPM`;
     if (statMaxGas) statMaxGas.textContent = `${maxGas} PPM`;
     if (statAvgGas) statAvgGas.textContent = `${avgGas} PPM`;
 
-    const statCurrentTemp = document.getElementById('statCurrentTemp');
     const statMinTemp = document.getElementById('statMinTemp');
     const statMaxTemp = document.getElementById('statMaxTemp');
     const statAvgTemp = document.getElementById('statAvgTemp');
-
-    if (statCurrentTemp) statCurrentTemp.innerHTML = `${currentTemp.toFixed(1)} <small>°C</small>`;
     if (statMinTemp) statMinTemp.textContent = `${minTemp}°C`;
     if (statMaxTemp) statMaxTemp.textContent = `${maxTemp}°C`;
     if (statAvgTemp) statAvgTemp.textContent = `${avgTemp}°C`;
 
-    const statCurrentHumid = document.getElementById('statCurrentHumid');
     const statMinHumid = document.getElementById('statMinHumid');
     const statMaxHumid = document.getElementById('statMaxHumid');
     const statAvgHumid = document.getElementById('statAvgHumid');
-
-    if (statCurrentHumid) statCurrentHumid.innerHTML = `${currentHumid.toFixed(1)} <small>%</small>`;
     if (statMinHumid) statMinHumid.textContent = `${minHumid}%`;
     if (statMaxHumid) statMaxHumid.textContent = `${maxHumid}%`;
     if (statAvgHumid) statAvgHumid.textContent = `${avgHumid}%`;
+
+    // Only update Current live values when device is actively streaming or simulation is active
+    const statCurrentGas = document.getElementById('statCurrentGas');
+    const statCurrentTemp = document.getElementById('statCurrentTemp');
+    const statCurrentHumid = document.getElementById('statCurrentHumid');
+    if (isDeviceOnline || isSimulationActive) {
+        if (statCurrentGas) statCurrentGas.innerHTML = `${Math.round(currentGas)} <small>PPM</small>`;
+        if (statCurrentTemp) statCurrentTemp.innerHTML = `${currentTemp.toFixed(1)} <small>°C</small>`;
+        if (statCurrentHumid) statCurrentHumid.innerHTML = `${currentHumid.toFixed(1)} <small>%</small>`;
+    } else {
+        if (statCurrentGas) statCurrentGas.innerHTML = `-- <small>PPM</small>`;
+        if (statCurrentTemp) statCurrentTemp.innerHTML = `-- <small>°C</small>`;
+        if (statCurrentHumid) statCurrentHumid.innerHTML = `-- <small>%</small>`;
+    }
 }
 
 /**
@@ -1507,11 +1532,15 @@ function loadUserPersistedHistory(user) {
     if (historicalChartInstance) {
         updateHistoricalChartDisplay();
     }
-    if (liveChartInstance && telemetryBuffer.timestamps.length > 0) {
+    if (isDeviceOnline && liveChartInstance && telemetryBuffer.timestamps.length > 0) {
         liveChartInstance.data.labels = telemetryBuffer.timestamps.slice(-MAX_LIVE_POINTS);
         liveChartInstance.data.datasets[0].data = telemetryBuffer.temp.slice(-MAX_LIVE_POINTS);
         liveChartInstance.data.datasets[1].data = telemetryBuffer.humid.slice(-MAX_LIVE_POINTS);
         liveChartInstance.data.datasets[2].data = telemetryBuffer.gas.slice(-MAX_LIVE_POINTS);
+        liveChartInstance.update();
+    } else if (!isDeviceOnline && liveChartInstance) {
+        liveChartInstance.data.labels = [];
+        liveChartInstance.data.datasets.forEach(ds => ds.data = []);
         liveChartInstance.update();
     }
     if (telemetryBuffer.gas.length > 0) {
@@ -1587,11 +1616,15 @@ function loadUserPersistedHistory(user) {
             if (historicalChartInstance) {
                 updateHistoricalChartDisplay();
             }
-            if (liveChartInstance && telemetryBuffer.timestamps.length > 0) {
+            if (isDeviceOnline && liveChartInstance && telemetryBuffer.timestamps.length > 0) {
                 liveChartInstance.data.labels = telemetryBuffer.timestamps.slice(-MAX_LIVE_POINTS);
                 liveChartInstance.data.datasets[0].data = telemetryBuffer.temp.slice(-MAX_LIVE_POINTS);
                 liveChartInstance.data.datasets[1].data = telemetryBuffer.humid.slice(-MAX_LIVE_POINTS);
                 liveChartInstance.data.datasets[2].data = telemetryBuffer.gas.slice(-MAX_LIVE_POINTS);
+                liveChartInstance.update();
+            } else if (!isDeviceOnline && liveChartInstance) {
+                liveChartInstance.data.labels = [];
+                liveChartInstance.data.datasets.forEach(ds => ds.data = []);
                 liveChartInstance.update();
             }
             if (telemetryBuffer.gas.length > 0) {
@@ -1636,8 +1669,16 @@ function switchDashboardTab(tabName) {
         if (tabLiveStatsBtn) tabLiveStatsBtn.classList.add('active');
         if (viewLiveStats) {
             viewLiveStats.style.display = 'block';
+            const offlineOverlay = document.getElementById('liveChartOfflineOverlay');
+            if (offlineOverlay) {
+                offlineOverlay.style.display = (isDeviceOnline || isSimulationActive) ? 'none' : 'flex';
+            }
             setTimeout(() => {
                 if (liveChartInstance) {
+                    if (!isDeviceOnline && !isSimulationActive) {
+                        liveChartInstance.data.labels = [];
+                        liveChartInstance.data.datasets.forEach(ds => ds.data = []);
+                    }
                     liveChartInstance.resize();
                     liveChartInstance.update();
                 }

@@ -372,9 +372,9 @@
                     <h2>Live Sensor Stream Analytics</h2>
                     <p>Live, continuous time-series stream plotted every 3 seconds directly from ESP32.</p>
                 </div>
-                <div class="stream-status-pill">
-                    <span class="pulse-ring"></span>
-                    <span>Live 3s Sampling</span>
+                <div class="stream-status-pill stream-offline" id="streamStatusPill">
+                    <span class="offline-ring"></span>
+                    <span>Stream Paused (Device Offline)</span>
                 </div>
             </div>
 
@@ -434,6 +434,12 @@
                 </div>
                 <div class="chart-canvas-box">
                     <canvas id="liveStreamingChart"></canvas>
+                    <div id="liveChartOfflineOverlay" class="chart-offline-overlay">
+                        <i class="fas fa-plug-circle-xmark"></i>
+                        <h4>Device Offline • Stream Inactive</h4>
+                        <p>Live waveform will stream automatically once ESP32 is powered on and connected.</p>
+                        <span class="offline-tip"><i class="fas fa-circle-info"></i> View past records in the <b>History &amp; Logs</b> tab</span>
+                    </div>
                 </div>
             </div>
         </div>
